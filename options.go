@@ -10,15 +10,16 @@ type optFunc func(*config)
 func (f optFunc) apply(c *config) { f(c) }
 
 type config struct {
-	provider    Provider
-	model       string
-	concerns    []string
-	maxTokens   int
+	provider     Provider
+	model        string
+	concerns     []string
+	maxTokens    int
 	contextLines int
-	failOn      Severity
-	gitContext  bool
-	symbols     bool
-	parallel    bool
+	failOn       Severity
+	gitContext   bool
+	symbols      bool
+	parallel     bool
+	reflection   bool
 }
 
 func defaultConfig() *config {
@@ -120,4 +121,8 @@ func WithSymbols(enabled bool) Option {
 
 func WithParallel(enabled bool) Option {
 	return optFunc(func(c *config) { c.parallel = enabled })
+}
+
+func WithReflection(enabled bool) Option {
+	return optFunc(func(c *config) { c.reflection = enabled })
 }
