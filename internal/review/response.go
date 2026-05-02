@@ -2,6 +2,8 @@ package review
 
 import (
 	"encoding/json"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -14,19 +16,30 @@ type rawFinding struct {
 	Message   string `json:"message"`
 	Fix       string `json:"fix"`
 	Reasoning string `json:"reasoning"`
+	CWE       string `json:"cwe"`
 }
 
 // ParseResponse extracts structured findings from the LLM response text.
 // It handles common formatting quirks: markdown code blocks, leading text, etc.
+// If strict JSON parsing fails, it applies lenient fixes and then falls back
+// to regex extraction.
 func ParseResponse(response string, concernName string) []Finding {
 	jsonStr := extractJSON(response)
 	if jsonStr == "" {
-		return nil
+		// Last resort: try regex extraction on the raw response.
+		return regexExtractFindings(response, concernName)
 	}
 
 	var raw []rawFinding
+
+	// First attempt: strict JSON parse.
 	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
-		return nil
+		// Second attempt: lenient JSON fix then parse.
+		fixed := lenientJSON(jsonStr)
+		if err2 := json.Unmarshal([]byte(fixed), &raw); err2 != nil {
+			// Third attempt: regex fallback.
+			return regexExtractFindings(response, concernName)
+		}
 	}
 
 	var findings []Finding
@@ -43,7 +56,119 @@ func ParseResponse(response string, concernName string) []Finding {
 			Message:   r.Message,
 			Fix:       r.Fix,
 			Reasoning: r.Reasoning,
+			CWE:       r.CWE,
 		})
+	}
+
+	return findings
+}
+
+// lenientJSON applies common fixes to malformed JSON from LLM output:
+// - Strips trailing commas before ] and }
+// - Removes JavaScript-style // line comments inside JSON
+// - Fixes unescaped newlines inside string values
+func lenientJSON(s string) string {
+	// Remove JavaScript-style // comments (lines where // appears outside strings).
+	// We handle this line-by-line to avoid mangling URLs in string values.
+	lines := strings.Split(s, "\n")
+	var cleaned []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "//") {
+			continue
+		}
+		cleaned = append(cleaned, line)
+	}
+	s = strings.Join(cleaned, "\n")
+
+	// Fix unescaped newlines inside string values by replacing literal
+	// newlines between unmatched quotes. We do a simple approach: replace
+	// any newline that sits between a non-closing context with \n.
+	// A more targeted fix: replace \n inside JSON string values.
+	var result strings.Builder
+	inString := false
+	escaped := false
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		if escaped {
+			result.WriteByte(ch)
+			escaped = false
+			continue
+		}
+		if ch == '\\' && inString {
+			result.WriteByte(ch)
+			escaped = true
+			continue
+		}
+		if ch == '"' {
+			inString = !inString
+			result.WriteByte(ch)
+			continue
+		}
+		if ch == '\n' && inString {
+			result.WriteString("\\n")
+			continue
+		}
+		result.WriteByte(ch)
+	}
+	s = result.String()
+
+	// Strip trailing commas before ] and }.
+	re := regexp.MustCompile(`,\s*([}\]])`)
+	s = re.ReplaceAllString(s, "$1")
+
+	return s
+}
+
+// regexExtractFindings attempts to extract findings via regex when JSON parsing
+// fails entirely. It looks for file, line, severity, and message patterns.
+func regexExtractFindings(s string, concernName string) []Finding {
+	fileRe := regexp.MustCompile(`"file"\s*:\s*"([^"]+)"`)
+	lineRe := regexp.MustCompile(`"line"\s*:\s*(\d+)`)
+	sevRe := regexp.MustCompile(`"severity"\s*:\s*"([^"]+)"`)
+	msgRe := regexp.MustCompile(`"message"\s*:\s*"([^"]+)"`)
+	fixRe := regexp.MustCompile(`"fix"\s*:\s*"([^"]+)"`)
+	reasonRe := regexp.MustCompile(`"reasoning"\s*:\s*"([^"]+)"`)
+	cweRe := regexp.MustCompile(`"cwe"\s*:\s*"([^"]*)"`)
+
+	// Split on object boundaries to find individual findings.
+	// We look for blocks that contain at least "file" and "message".
+	blocks := regexp.MustCompile(`\{[^{}]+\}`).FindAllString(s, -1)
+	if len(blocks) == 0 {
+		return nil
+	}
+
+	var findings []Finding
+	for _, block := range blocks {
+		fileMatch := fileRe.FindStringSubmatch(block)
+		msgMatch := msgRe.FindStringSubmatch(block)
+		if fileMatch == nil || msgMatch == nil {
+			continue
+		}
+
+		f := Finding{
+			Concern: concernName,
+			File:    fileMatch[1],
+			Message: msgMatch[1],
+		}
+
+		if lineMatch := lineRe.FindStringSubmatch(block); lineMatch != nil {
+			f.Line, _ = strconv.Atoi(lineMatch[1])
+		}
+		if sevMatch := sevRe.FindStringSubmatch(block); sevMatch != nil {
+			f.Severity = parseSeverity(sevMatch[1])
+		}
+		if fixMatch := fixRe.FindStringSubmatch(block); fixMatch != nil {
+			f.Fix = fixMatch[1]
+		}
+		if reasonMatch := reasonRe.FindStringSubmatch(block); reasonMatch != nil {
+			f.Reasoning = reasonMatch[1]
+		}
+		if cweMatch := cweRe.FindStringSubmatch(block); cweMatch != nil {
+			f.CWE = cweMatch[1]
+		}
+
+		findings = append(findings, f)
 	}
 
 	return findings

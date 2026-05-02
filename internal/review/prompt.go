@@ -2,6 +2,8 @@ package review
 
 import (
 	"fmt"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/GrayCodeAI/sight/internal/diff"
@@ -22,7 +24,8 @@ IMPORTANT: Respond ONLY with a JSON array of findings. Each finding must have:
   "severity": "critical|high|medium|low|info",
   "message": "Clear description of the issue",
   "fix": "Suggested code fix or approach",
-  "reasoning": "Why this is a problem"
+  "reasoning": "Why this is a problem",
+  "cwe": "CWE-89 (if applicable, otherwise empty string)"
 }
 
 If you find no issues, respond with an empty array: []
@@ -82,6 +85,89 @@ func BuildPrompt(concern Concern, files []diff.File, contextLines int) string {
 	return b.String()
 }
 
+// detectLanguages counts file extensions in the diff and returns a formatted
+// language context summary. The primary language is the one with the most files.
+func detectLanguages(files []diff.File) string {
+	extCount := make(map[string]int)
+	for _, f := range files {
+		if f.Deleted {
+			continue
+		}
+		ext := filepath.Ext(f.Path)
+		if ext == "" {
+			ext = filepath.Base(f.Path)
+		}
+		extCount[ext]++
+	}
+	if len(extCount) == 0 {
+		return ""
+	}
+
+	// Determine primary language by highest count.
+	type extEntry struct {
+		ext   string
+		count int
+	}
+	entries := make([]extEntry, 0, len(extCount))
+	for ext, count := range extCount {
+		entries = append(entries, extEntry{ext, count})
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].count != entries[j].count {
+			return entries[i].count > entries[j].count
+		}
+		return entries[i].ext < entries[j].ext
+	})
+
+	// Map extensions to language names for primary language display.
+	langNames := map[string]string{
+		".go":    "Go",
+		".py":    "Python",
+		".js":    "JavaScript",
+		".ts":    "TypeScript",
+		".tsx":   "TypeScript (React)",
+		".jsx":   "JavaScript (React)",
+		".java":  "Java",
+		".rs":    "Rust",
+		".rb":    "Ruby",
+		".cpp":   "C++",
+		".c":     "C",
+		".h":     "C/C++ Header",
+		".cs":    "C#",
+		".php":   "PHP",
+		".swift": "Swift",
+		".kt":    "Kotlin",
+		".scala": "Scala",
+		".yaml":  "YAML",
+		".yml":   "YAML",
+		".json":  "JSON",
+		".toml":  "TOML",
+		".md":    "Markdown",
+		".sql":   "SQL",
+		".sh":    "Shell",
+		".bash":  "Bash",
+	}
+
+	primary := entries[0].ext
+	primaryLang := langNames[primary]
+	if primaryLang == "" {
+		primaryLang = strings.TrimPrefix(primary, ".")
+	}
+
+	var b strings.Builder
+	b.WriteString("## Context\n")
+	b.WriteString(fmt.Sprintf("Primary language: %s\n", primaryLang))
+	b.WriteString("Files: ")
+	for i, e := range entries {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(fmt.Sprintf("%d %s", e.count, e.ext))
+	}
+	b.WriteString("\n")
+	return b.String()
+}
+
 // BuildPromptEnhanced constructs a PR-Agent style prompt that separates new and
 // old hunks with clear section markers. This helps the LLM distinguish added
 // code from removed code more accurately.
@@ -89,6 +175,12 @@ func BuildPromptEnhanced(concern Concern, files []diff.File, contextLines int) s
 	var b strings.Builder
 
 	b.WriteString("Review the following code changes:\n\n")
+
+	// Inject language context before the diff content.
+	if langCtx := detectLanguages(files); langCtx != "" {
+		b.WriteString(langCtx)
+		b.WriteString("\n")
+	}
 
 	for _, file := range files {
 		if file.Deleted {

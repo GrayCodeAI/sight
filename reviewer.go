@@ -244,7 +244,11 @@ func (r *Reviewer) ReviewFiles(ctx context.Context, files []FileChange) (*Result
 func toPublicFindings(internal []review.Finding) []Finding {
 	out := make([]Finding, len(internal))
 	for i, f := range internal {
-		cwe := review.MatchCWE(f.Message, f.Fix)
+		// Prefer LLM-provided CWE; fall back to keyword-based MatchCWE.
+		cwe := f.CWE
+		if cwe == "" {
+			cwe = review.MatchCWE(f.Message, f.Fix)
+		}
 		out[i] = Finding{
 			Concern:   f.Concern,
 			Severity:  Severity(f.Severity),

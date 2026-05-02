@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/sight/internal/diff"
+	"github.com/GrayCodeAI/sight/internal/review"
 )
 
 // Description is the generated PR summary.
@@ -33,7 +34,7 @@ func Describe(ctx context.Context, rawDiff string, opts ...Option) (*Description
 		return &Description{Title: "No changes", Summary: "Empty diff"}, nil
 	}
 
-	prompt := buildDescribePrompt(files)
+	prompt := buildDescribePrompt(files, cfg.maxTokens)
 
 	resp, err := cfg.provider.Chat(ctx, []Message{
 		{Role: "user", Content: prompt},
@@ -69,7 +70,7 @@ Rules:
 - Risk: consider blast radius, backwards compatibility, data migrations
 - Test plan: concrete steps, not generic "run tests"`
 
-func buildDescribePrompt(files []diff.File) string {
+func buildDescribePrompt(files []diff.File, maxTokens int) string {
 	var b strings.Builder
 	b.WriteString("Generate a PR description for these changes:\n\n")
 	b.WriteString("## Stats\n")
@@ -88,27 +89,50 @@ func buildDescribePrompt(files []diff.File) string {
 		b.WriteString("- " + f.Path + prefix + "\n")
 	}
 
-	b.WriteString("\n## Diff\n\n```diff\n")
+	// Build the diff section, truncating if it would exceed the token budget.
+	// For Describe, keep the file list + stats but truncate the diff to fit.
+	tokenBudget := maxTokens * 3 // leave room for the response
+	headerTokens := review.EstimateTokens(b.String())
+	diffBudget := tokenBudget - headerTokens - 100 // 100 token buffer
+
+	var diffBuilder strings.Builder
+	diffBuilder.WriteString("\n## Diff\n\n```diff\n")
+	truncated := false
+
 	for _, f := range files {
 		if f.Deleted {
 			continue
 		}
-		b.WriteString("--- " + f.Path + "\n")
+		var fileSection strings.Builder
+		fileSection.WriteString("--- " + f.Path + "\n")
 		for _, h := range f.Hunks {
 			for _, l := range h.Lines {
 				switch l.Type {
 				case diff.LineAdded:
-					b.WriteString("+" + l.Content + "\n")
+					fileSection.WriteString("+" + l.Content + "\n")
 				case diff.LineRemoved:
-					b.WriteString("-" + l.Content + "\n")
+					fileSection.WriteString("-" + l.Content + "\n")
 				case diff.LineContext:
-					b.WriteString(" " + l.Content + "\n")
+					fileSection.WriteString(" " + l.Content + "\n")
 				}
 			}
 		}
-	}
-	b.WriteString("```\n")
 
+		sectionTokens := review.EstimateTokens(fileSection.String())
+		currentTokens := review.EstimateTokens(diffBuilder.String())
+		if diffBudget > 0 && currentTokens+sectionTokens > diffBudget {
+			truncated = true
+			break
+		}
+		diffBuilder.WriteString(fileSection.String())
+	}
+
+	diffBuilder.WriteString("```\n")
+	if truncated {
+		diffBuilder.WriteString("\n(diff truncated to fit token budget — file list and stats above are complete)\n")
+	}
+
+	b.WriteString(diffBuilder.String())
 	return b.String()
 }
 
