@@ -81,3 +81,62 @@ func BuildPrompt(concern Concern, files []diff.File, contextLines int) string {
 
 	return b.String()
 }
+
+// BuildPromptEnhanced constructs a PR-Agent style prompt that separates new and
+// old hunks with clear section markers. This helps the LLM distinguish added
+// code from removed code more accurately.
+func BuildPromptEnhanced(concern Concern, files []diff.File, contextLines int) string {
+	var b strings.Builder
+
+	b.WriteString("Review the following code changes:\n\n")
+
+	for _, file := range files {
+		if file.Deleted {
+			continue
+		}
+		b.WriteString(fmt.Sprintf("## File: %s\n", file.Path))
+		if file.Renamed {
+			b.WriteString(fmt.Sprintf("(renamed from %s)\n", file.OldPath))
+		}
+		if file.Added {
+			b.WriteString("(new file)\n")
+		}
+		b.WriteString("\n")
+
+		for _, hunk := range file.Hunks {
+			b.WriteString(fmt.Sprintf("@@ -%d,%d +%d,%d @@ %s\n\n",
+				hunk.OldStart, hunk.OldCount,
+				hunk.NewStart, hunk.NewCount,
+				hunk.Header))
+
+			// __new hunk__ section: added lines and context lines with new-file line numbers
+			b.WriteString("__new hunk__\n")
+			for _, line := range hunk.Lines {
+				switch line.Type {
+				case diff.LineAdded:
+					b.WriteString(fmt.Sprintf("%d +%s\n", line.NewNum, line.Content))
+				case diff.LineContext:
+					b.WriteString(fmt.Sprintf("%d  %s\n", line.NewNum, line.Content))
+				}
+			}
+			b.WriteString("\n")
+
+			// __old hunk__ section: removed lines and context lines with old-file line numbers
+			b.WriteString("__old hunk__\n")
+			for _, line := range hunk.Lines {
+				switch line.Type {
+				case diff.LineRemoved:
+					b.WriteString(fmt.Sprintf("%d -%s\n", line.OldNum, line.Content))
+				case diff.LineContext:
+					b.WriteString(fmt.Sprintf("%d  %s\n", line.OldNum, line.Content))
+				}
+			}
+			b.WriteString("\n")
+		}
+	}
+
+	b.WriteString(fmt.Sprintf("Focus on: %s\n", concern.Name))
+	b.WriteString("Respond with a JSON array of findings.\n")
+
+	return b.String()
+}
