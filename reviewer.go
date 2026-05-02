@@ -121,6 +121,12 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 	}
 
 	allFindings = dedup(allFindings)
+
+	// Self-reflection pass: validate findings with a second LLM call
+	if r.cfg.reflection && len(allFindings) > 0 && ctx.Err() == nil {
+		allFindings = r.reflect(ctx, allFindings, rawDiff, &tokensUsed)
+	}
+
 	sort.Slice(allFindings, func(i, j int) bool {
 		if allFindings[i].Severity != allFindings[j].Severity {
 			return allFindings[i].Severity > allFindings[j].Severity
@@ -271,4 +277,45 @@ func countHunks(files []diff.File) int {
 		total += len(f.Hunks)
 	}
 	return total
+}
+
+// reflect runs the self-reflection pass to validate findings.
+func (r *Reviewer) reflect(ctx context.Context, findings []Finding, rawDiff string, tokensUsed *int) []Finding {
+	internalFindings := make([]review.Finding, len(findings))
+	for i, f := range findings {
+		internalFindings[i] = review.Finding{
+			Concern:   f.Concern,
+			Severity:  review.Severity(f.Severity),
+			File:      f.File,
+			Line:      f.Line,
+			EndLine:   f.EndLine,
+			Message:   f.Message,
+			Fix:       f.Fix,
+			Reasoning: f.Reasoning,
+		}
+	}
+
+	prompt := review.BuildReflectPrompt(internalFindings, rawDiff)
+
+	resp, err := r.cfg.provider.Chat(ctx, []Message{
+		{Role: "user", Content: prompt},
+	}, ChatOpts{
+		Model:       r.cfg.model,
+		MaxTokens:   r.cfg.maxTokens,
+		Temperature: 0.1,
+		System:      review.ReflectSystemPrompt,
+	})
+	if err != nil {
+		return findings
+	}
+
+	*tokensUsed += resp.TokensUsed
+
+	reflections := review.ParseReflectResponse(resp.Content)
+	if len(reflections) == 0 {
+		return findings
+	}
+
+	validated := review.ApplyReflection(internalFindings, reflections)
+	return toPublicFindings(validated)
 }
