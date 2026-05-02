@@ -28,6 +28,7 @@ type Finding struct {
 	Message   string
 	Fix       string
 	Reasoning string
+	CWE       string
 }
 
 // AllConcerns returns every available concern definition.
@@ -43,7 +44,10 @@ func AllConcerns() []Concern {
 - Missing input validation and sanitization
 - SSRF, open redirects, CORS misconfiguration
 - Race conditions that could be exploited
-- Cryptographic weaknesses`,
+- Cryptographic weaknesses
+
+Example of a correct finding:
+{"file": "handler.go", "line": 42, "severity": "critical", "message": "SQL injection: user input concatenated directly into query string", "fix": "Use parameterized query: db.Query(\"SELECT * FROM users WHERE id = $1\", userID)", "reasoning": "The userID variable comes from r.URL.Query() and is concatenated into the SQL string without sanitization"}`,
 		},
 		{
 			Name: "bugs",
@@ -56,7 +60,10 @@ func AllConcerns() []Concern {
 - Integer overflow/underflow
 - Incorrect boolean logic or operator precedence
 - Unreachable code and dead branches
-- Type assertion failures`,
+- Type assertion failures
+
+Example of a correct finding:
+{"file": "service.go", "line": 87, "severity": "high", "message": "Nil pointer dereference: result used without checking error return from GetUser", "fix": "Add nil check: if result == nil { return fmt.Errorf(\"user not found: %s\", id) }", "reasoning": "GetUser returns (nil, nil) when user is not found, so result.Name on line 88 will panic"}`,
 		},
 		{
 			Name: "performance",
@@ -68,7 +75,10 @@ func AllConcerns() []Concern {
 - Blocking operations that could be concurrent
 - N+1 query patterns
 - Excessive string concatenation without builders
-- Missing connection/resource pooling`,
+- Missing connection/resource pooling
+
+Example of a correct finding:
+{"file": "process.go", "line": 55, "severity": "medium", "message": "Allocation in hot loop: fmt.Sprintf called on every iteration to build key", "fix": "Pre-allocate a strings.Builder outside the loop or use string concatenation for simple key construction", "reasoning": "fmt.Sprintf allocates a new string each iteration; with 10k+ items this causes significant GC pressure"}`,
 		},
 		{
 			Name: "correctness",
@@ -80,7 +90,10 @@ func AllConcerns() []Concern {
 - Are API contracts and interfaces respected?
 - Are invariants maintained across the change?
 - Could the change break existing callers?
-- Are defer/cleanup operations in the correct order?`,
+- Are defer/cleanup operations in the correct order?
+
+Example of a correct finding:
+{"file": "repo.go", "line": 34, "severity": "high", "message": "Unchecked error: os.Remove return value discarded, file may not be deleted", "fix": "if err := os.Remove(path); err != nil { return fmt.Errorf(\"cleanup failed: %w\", err) }", "reasoning": "os.Remove can fail due to permissions or file-in-use; ignoring the error leaves stale temp files that accumulate over time"}`,
 		},
 		{
 			Name: "style",
@@ -91,7 +104,10 @@ func AllConcerns() []Concern {
 - Abstraction level: is the code at a consistent abstraction level?
 - Error messages: are they actionable and specific?
 - API design: is the public surface minimal and intuitive?
-- Testability: is the code structured for easy testing?`,
+- Testability: is the code structured for easy testing?
+
+Example of a correct finding:
+{"file": "client.go", "line": 12, "severity": "low", "message": "Exported function FetchData lacks doc comment", "fix": "// FetchData retrieves data from the remote API by ID.\nfunc FetchData(id string) (*Data, error) {", "reasoning": "Go convention requires doc comments on all exported symbols; godoc and linters flag this"}`,
 		},
 	}
 }

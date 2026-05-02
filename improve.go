@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/sight/internal/diff"
+	"github.com/GrayCodeAI/sight/internal/review"
 )
 
 // Improvement represents a suggested code improvement.
@@ -42,6 +43,10 @@ func Improve(ctx context.Context, rawDiff string, opts ...Option) (*ImproveResul
 	if len(files) == 0 {
 		return &ImproveResult{}, nil
 	}
+
+	// For Improve, only send the first N files that fit within the token budget.
+	tokenBudget := cfg.maxTokens * 3 // leave room for response
+	files = truncateFilesForBudget(files, tokenBudget)
 
 	prompt := buildImprovePrompt(files)
 
@@ -142,6 +147,52 @@ func parseImprovements(response string) []Improvement {
 		}
 	}
 	return valid
+}
+
+// truncateFilesForBudget returns a subset of files whose combined estimated
+// token count fits within the given budget. It keeps files in order, including
+// only those that fit.
+func truncateFilesForBudget(files []diff.File, tokenBudget int) []diff.File {
+	if tokenBudget <= 0 {
+		return files
+	}
+
+	overhead := review.EstimateTokens(improveSystemPrompt) + 200
+	available := tokenBudget - overhead
+	if available <= 0 {
+		available = tokenBudget / 2
+	}
+
+	var result []diff.File
+	currentTokens := 0
+	for _, f := range files {
+		if f.Deleted {
+			continue
+		}
+		fileTokens := estimateFileTokensPublic(f)
+		if currentTokens+fileTokens > available && len(result) > 0 {
+			break
+		}
+		result = append(result, f)
+		currentTokens += fileTokens
+	}
+	if len(result) == 0 && len(files) > 0 {
+		// Always include at least the first file.
+		result = append(result, files[0])
+	}
+	return result
+}
+
+// estimateFileTokensPublic approximates the token count for a single file's diff.
+func estimateFileTokensPublic(f diff.File) int {
+	tokens := review.EstimateTokens(f.Path) + 20
+	for _, h := range f.Hunks {
+		tokens += 10
+		for _, l := range h.Lines {
+			tokens += review.EstimateTokens(l.Content) + 1
+		}
+	}
+	return tokens
 }
 
 func extractJSONArray(s string) string {
