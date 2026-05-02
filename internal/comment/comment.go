@@ -8,6 +8,29 @@ import (
 	"github.com/GrayCodeAI/sight/internal/diff"
 )
 
+// FilterMode controls which lines are eligible for comment placement.
+// It determines how strictly findings must align with the diff to be
+// included in the output.
+type FilterMode int
+
+const (
+	// FilterAdded reports only on added lines (lines starting with +).
+	// This is the most conservative mode and the default behavior.
+	FilterAdded FilterMode = iota
+
+	// FilterDiffContext reports on any line within the diff context,
+	// including context lines (unchanged) surrounding the changes.
+	FilterDiffContext
+
+	// FilterFile reports on any line in a changed file, even lines
+	// outside the diff hunks. Useful for whole-file analysis.
+	FilterFile
+
+	// FilterNone reports everything regardless of diff — no filtering
+	// is applied. All findings are included as comments.
+	FilterNone
+)
+
 // Inline represents a comment positioned on a specific line in a diff.
 type Inline struct {
 	Path       string
@@ -31,19 +54,44 @@ type FindingInput struct {
 
 // MapToInline converts findings to positioned inline comments.
 // Only includes findings that map to valid positions in the diff.
+// Uses FilterAdded mode (only added lines) for backward compatibility.
 func MapToInline(findings []FindingInput, files []diff.File) []Inline {
+	return MapToInlineFiltered(findings, files, FilterAdded)
+}
+
+// MapToInlineFiltered converts findings to positioned inline comments using
+// the specified FilterMode to control which findings are included.
+func MapToInlineFiltered(findings []FindingInput, files []diff.File, mode FilterMode) []Inline {
 	var comments []Inline
 	fileMap := buildFileMap(files)
 
 	for _, f := range findings {
 		diffFile, exists := fileMap[f.File]
-		if !exists {
-			continue
+
+		switch mode {
+		case FilterNone:
+			// Include all findings regardless of diff position
+			comments = append(comments, buildComment(f))
+
+		case FilterFile:
+			// Include if the file is in the diff, any line
+			if exists {
+				comments = append(comments, buildComment(f))
+			}
+
+		case FilterDiffContext:
+			// Include if the line falls within any hunk's full range
+			// (added, removed, or context lines)
+			if exists && isInDiffContext(diffFile, f.Line) {
+				comments = append(comments, buildComment(f))
+			}
+
+		default: // FilterAdded
+			// Include only if the line is within the diff's new-side range
+			if exists && isInDiff(diffFile, f.Line) {
+				comments = append(comments, buildComment(f))
+			}
 		}
-		if !isInDiff(diffFile, f.Line) {
-			continue
-		}
-		comments = append(comments, buildComment(f))
 	}
 
 	return comments
@@ -63,6 +111,27 @@ func isInDiff(file diff.File, line int) bool {
 		end := hunk.NewStart + hunk.NewCount
 		if line >= start && line <= end {
 			return true
+		}
+	}
+	return false
+}
+
+// isInDiffContext returns true if the line falls within the broader context
+// of any hunk, including context lines surrounding the changes.
+func isInDiffContext(file diff.File, line int) bool {
+	for _, hunk := range file.Hunks {
+		// The context window includes all lines in the hunk (context,
+		// added, and removed). We check both old and new ranges.
+		newStart := hunk.NewStart
+		newEnd := hunk.NewStart + hunk.NewCount
+		if line >= newStart && line <= newEnd {
+			return true
+		}
+		// Also check against individual line numbers for precision
+		for _, l := range hunk.Lines {
+			if l.NewNum == line || l.OldNum == line {
+				return true
+			}
 		}
 	}
 	return false

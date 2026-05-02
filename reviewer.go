@@ -64,6 +64,10 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 	}
 
 	concerns := review.BuildConcerns(r.cfg.concerns)
+	// Append custom concerns loaded from .sight/checks/ markdown files
+	if len(r.cfg.customConcerns) > 0 {
+		concerns = append(concerns, r.cfg.customConcerns...)
+	}
 
 	var (
 		mu          sync.Mutex
@@ -165,7 +169,7 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 			Reasoning: f.Reasoning,
 		}
 	}
-	comments := comment.MapToInline(commentInputs, files)
+	comments := comment.MapToInlineFiltered(commentInputs, files, r.cfg.filterMode)
 
 	bySev := make(map[Severity]int)
 	byConcern := make(map[string]int)

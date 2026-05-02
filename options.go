@@ -1,5 +1,22 @@
 package sight
 
+import (
+	"github.com/GrayCodeAI/sight/internal/comment"
+	"github.com/GrayCodeAI/sight/internal/review"
+)
+
+// FilterMode re-exports the comment package's FilterMode for public use.
+// It controls which lines are eligible for inline comment placement.
+type FilterMode = comment.FilterMode
+
+// Filter mode constants re-exported for public use.
+const (
+	FilterAdded       = comment.FilterAdded
+	FilterDiffContext = comment.FilterDiffContext
+	FilterFile        = comment.FilterFile
+	FilterNone        = comment.FilterNone
+)
+
 // Option configures a review operation.
 type Option interface {
 	apply(*config)
@@ -10,19 +27,21 @@ type optFunc func(*config)
 func (f optFunc) apply(c *config) { f(c) }
 
 type config struct {
-	provider     Provider
-	model        string
-	concerns     []string
-	maxTokens    int
-	contextLines int
-	failOn       Severity
-	gitContext   bool
-	symbols      bool
-	parallel     bool
-	reflection   bool
-	exclude      []string
-	minScore     int
-	projectRules string
+	provider       Provider
+	model          string
+	concerns       []string
+	customConcerns []review.Concern
+	maxTokens      int
+	contextLines   int
+	failOn         Severity
+	filterMode     comment.FilterMode
+	gitContext     bool
+	symbols        bool
+	parallel       bool
+	reflection     bool
+	exclude        []string
+	minScore       int
+	projectRules   string
 }
 
 // defaultExclude is the default set of file patterns excluded from review.
@@ -165,4 +184,11 @@ func WithMinScore(n int) Option {
 // WithProjectRules injects project-specific rules into the LLM system prompt.
 func WithProjectRules(rules string) Option {
 	return optFunc(func(c *config) { c.projectRules = rules })
+}
+
+// WithFilterMode sets the diff filter mode that controls which findings
+// are included as inline comments. See FilterAdded, FilterDiffContext,
+// FilterFile, and FilterNone.
+func WithFilterMode(mode FilterMode) Option {
+	return optFunc(func(c *config) { c.filterMode = mode })
 }
