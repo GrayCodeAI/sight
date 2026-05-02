@@ -17,8 +17,8 @@ type Inline struct {
 	Suggestion string
 }
 
-// Finding mirrors the public Finding for internal use (avoids import cycle).
-type Finding struct {
+// FindingInput is the input format for MapToInline.
+type FindingInput struct {
 	Concern   string
 	Severity  int
 	File      string
@@ -30,28 +30,12 @@ type Finding struct {
 }
 
 // MapToInline converts findings to positioned inline comments.
-// It only includes findings that map to valid positions in the diff.
-func MapToInline(findings interface{}, files []diff.File) []Inline {
-	// Accept []Finding from the sight package via interface
-	fs, ok := findings.([]struct {
-		Concern   string
-		Severity  int
-		File      string
-		Line      int
-		EndLine   int
-		Message   string
-		Fix       string
-		Reasoning string
-	})
-
-	if !ok {
-		return mapGeneric(findings, files)
-	}
-
+// Only includes findings that map to valid positions in the diff.
+func MapToInline(findings []FindingInput, files []diff.File) []Inline {
 	var comments []Inline
 	fileMap := buildFileMap(files)
 
-	for _, f := range fs {
+	for _, f := range findings {
 		diffFile, exists := fileMap[f.File]
 		if !exists {
 			continue
@@ -59,14 +43,10 @@ func MapToInline(findings interface{}, files []diff.File) []Inline {
 		if !isInDiff(diffFile, f.Line) {
 			continue
 		}
-		comments = append(comments, buildComment(f.File, f.Line, f.EndLine, f.Message, f.Fix, f.Reasoning, f.Severity))
+		comments = append(comments, buildComment(f))
 	}
 
 	return comments
-}
-
-func mapGeneric(findings interface{}, files []diff.File) []Inline {
-	return nil
 }
 
 func buildFileMap(files []diff.File) map[string]diff.File {
@@ -88,35 +68,35 @@ func isInDiff(file diff.File, line int) bool {
 	return false
 }
 
-func buildComment(path string, line, endLine int, message, fix, reasoning string, severity int) Inline {
+func buildComment(f FindingInput) Inline {
 	var body strings.Builder
 
-	sevLabel := []string{"info", "low", "medium", "high", "critical"}
-	sev := "info"
-	if severity < len(sevLabel) {
-		sev = sevLabel[severity]
+	sevLabels := []string{"INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"}
+	sev := "INFO"
+	if f.Severity >= 0 && f.Severity < len(sevLabels) {
+		sev = sevLabels[f.Severity]
 	}
 
-	body.WriteString(fmt.Sprintf("**[%s]** %s\n", strings.ToUpper(sev), message))
+	body.WriteString(fmt.Sprintf("**[%s]** %s\n", sev, f.Message))
 
-	if reasoning != "" {
-		body.WriteString(fmt.Sprintf("\n> %s\n", reasoning))
+	if f.Reasoning != "" {
+		body.WriteString(fmt.Sprintf("\n> %s\n", f.Reasoning))
 	}
 
-	comment := Inline{
-		Path:      path,
-		StartLine: line,
-		EndLine:   endLine,
+	c := Inline{
+		Path:      f.File,
+		StartLine: f.Line,
+		EndLine:   f.EndLine,
 		Body:      body.String(),
 	}
 
-	if fix != "" && looksLikeCode(fix) {
-		comment.Suggestion = fix
-	} else if fix != "" {
-		comment.Body += fmt.Sprintf("\n**Fix:** %s\n", fix)
+	if f.Fix != "" && looksLikeCode(f.Fix) {
+		c.Suggestion = f.Fix
+	} else if f.Fix != "" {
+		c.Body += fmt.Sprintf("\n**Fix:** %s\n", f.Fix)
 	}
 
-	return comment
+	return c
 }
 
 func looksLikeCode(s string) bool {

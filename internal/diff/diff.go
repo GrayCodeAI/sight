@@ -59,22 +59,21 @@ func Parse(raw string) []File {
 	return files
 }
 
-// CombineFileChanges builds a unified diff string from FileChange inputs.
-func CombineFileChanges(changes interface{}) string {
-	type fc struct {
-		Path    string
-		OldPath string
-		Diff    string
-		Content string
-	}
+// FileChangeInput is the input type for CombineFileChanges.
+type FileChangeInput struct {
+	Path    string
+	OldPath string
+	Diff    string
+	Content string
+}
 
+// CombineFileChanges builds a unified diff string from file change inputs.
+func CombineFileChanges(changes []FileChangeInput) string {
 	var b strings.Builder
-	// Accept []FileChange via interface to avoid circular import
-	// The caller passes the correct type
-	if arr, ok := changes.([]fc); ok {
-		for _, c := range arr {
-			if c.Diff != "" {
-				b.WriteString(c.Diff)
+	for _, c := range changes {
+		if c.Diff != "" {
+			b.WriteString(c.Diff)
+			if !strings.HasSuffix(c.Diff, "\n") {
 				b.WriteString("\n")
 			}
 		}

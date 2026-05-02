@@ -2,52 +2,57 @@
 package context
 
 import (
+	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
-// BlameInfo contains git blame information for a file region.
-type BlameInfo struct {
-	File    string
-	Lines   []BlameLine
+// FileContext holds contextual information about a changed file.
+type FileContext struct {
+	Path          string
+	RecentCommits []string
+	BlameSnippet  string
 }
 
-// BlameLine is a single line's blame data.
-type BlameLine struct {
-	Hash    string
-	Author  string
-	Date    string
-	Line    int
-	Content string
+// Enrich gathers git context for the given file paths.
+// Returns context for each file, best-effort (non-fatal on failures).
+func Enrich(files []string) []FileContext {
+	var results []FileContext
+	for _, f := range files {
+		fc := FileContext{Path: f}
+		if commits, err := recentCommits(f, 5); err == nil {
+			fc.RecentCommits = commits
+		}
+		results = append(results, fc)
+	}
+	return results
 }
 
-// Blame runs git blame on the specified file and line range.
-func Blame(file string, startLine, endLine int) (*BlameInfo, error) {
-	args := []string{"blame", "--porcelain"}
-	if startLine > 0 && endLine > 0 {
-		args = append(args, "-L", strings.Join([]string{itoa(startLine), itoa(endLine)}, ","))
-	}
-	args = append(args, "--", file)
-
-	out, err := exec.Command("git", args...).Output()
-	if err != nil {
-		return nil, err
+// FormatContext renders file contexts as text suitable for LLM prompt injection.
+func FormatContext(contexts []FileContext) string {
+	if len(contexts) == 0 {
+		return ""
 	}
 
-	return parseBlame(file, string(out)), nil
-}
+	var b strings.Builder
+	b.WriteString("\n## Git Context\n\n")
 
-// RecentCommits returns the last N commits that touched a file.
-func RecentCommits(file string, n int) ([]string, error) {
-	out, err := exec.Command("git", "log", "--oneline", "-n", itoa(n), "--", file).Output()
-	if err != nil {
-		return nil, err
+	for _, fc := range contexts {
+		if len(fc.RecentCommits) == 0 {
+			continue
+		}
+		b.WriteString(fmt.Sprintf("### %s — Recent changes:\n", fc.Path))
+		for _, c := range fc.RecentCommits {
+			b.WriteString(fmt.Sprintf("  - %s\n", c))
+		}
+		if fc.BlameSnippet != "" {
+			b.WriteString(fmt.Sprintf("  Blame: %s\n", fc.BlameSnippet))
+		}
+		b.WriteString("\n")
 	}
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	if len(lines) == 1 && lines[0] == "" {
-		return nil, nil
-	}
-	return lines, nil
+
+	return b.String()
 }
 
 // DiffBase returns the diff of the current branch against a base branch.
@@ -56,7 +61,7 @@ func DiffBase(base string) (string, error) {
 	if err != nil {
 		out2, err2 := exec.Command("git", "diff", base).Output()
 		if err2 != nil {
-			return "", err
+			return "", fmt.Errorf("git diff failed: %w", err)
 		}
 		return string(out2), nil
 	}
@@ -67,7 +72,7 @@ func DiffBase(base string) (string, error) {
 func ChangedFiles(base string) ([]string, error) {
 	out, err := exec.Command("git", "diff", "--name-only", base+"...HEAD").Output()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("git diff --name-only failed: %w", err)
 	}
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	if len(lines) == 1 && lines[0] == "" {
@@ -76,49 +81,47 @@ func ChangedFiles(base string) ([]string, error) {
 	return lines, nil
 }
 
-func parseBlame(file, output string) *BlameInfo {
-	info := &BlameInfo{File: file}
-	lines := strings.Split(output, "\n")
-	lineNum := 0
+// Blame runs git blame on a specific line range and returns a summary.
+func Blame(file string, startLine, endLine int) (string, error) {
+	args := []string{"blame", "--line-porcelain",
+		"-L", strconv.Itoa(startLine) + "," + strconv.Itoa(endLine),
+		"--", file}
 
-	for i := 0; i < len(lines); i++ {
-		line := lines[i]
-		parts := strings.Fields(line)
-		if len(parts) >= 3 && len(parts[0]) == 40 {
-			lineNum++
-			bl := BlameLine{
-				Hash: parts[0],
-				Line: lineNum,
-			}
-			for i++; i < len(lines); i++ {
-				inner := lines[i]
-				if strings.HasPrefix(inner, "author ") {
-					bl.Author = strings.TrimPrefix(inner, "author ")
-				} else if strings.HasPrefix(inner, "author-time ") {
-					bl.Date = strings.TrimPrefix(inner, "author-time ")
-				} else if strings.HasPrefix(inner, "\t") {
-					bl.Content = strings.TrimPrefix(inner, "\t")
-					break
-				}
-			}
-			info.Lines = append(info.Lines, bl)
-		}
+	out, err := exec.Command("git", args...).Output()
+	if err != nil {
+		return "", fmt.Errorf("git blame failed: %w", err)
 	}
 
-	return info
+	return parseBlameAuthors(string(out)), nil
 }
 
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
+func recentCommits(file string, n int) ([]string, error) {
+	out, err := exec.Command("git", "log", "--oneline", "-n", strconv.Itoa(n), "--", file).Output()
+	if err != nil {
+		return nil, err
 	}
-	if n < 0 {
-		return "-" + itoa(-n)
+	text := strings.TrimSpace(string(out))
+	if text == "" {
+		return nil, nil
 	}
-	var digits []byte
-	for n > 0 {
-		digits = append([]byte{byte('0' + n%10)}, digits...)
-		n /= 10
+	return strings.Split(text, "\n"), nil
+}
+
+func parseBlameAuthors(output string) string {
+	authors := make(map[string]int)
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "author ") {
+			author := strings.TrimPrefix(line, "author ")
+			authors[author]++
+		}
 	}
-	return string(digits)
+	if len(authors) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(authors))
+	for author, count := range authors {
+		parts = append(parts, fmt.Sprintf("%s(%d)", author, count))
+	}
+	return strings.Join(parts, ", ")
 }
