@@ -18,6 +18,7 @@ type Finding struct {
 	Message   string
 	Fix       string
 	Reasoning string
+	CWE       string
 }
 
 // Stats for rendering.

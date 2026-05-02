@@ -45,11 +45,18 @@ type SARIFMultiformat struct {
 }
 
 type SARIFResult struct {
-	RuleID    string          `json:"ruleId"`
-	Level     string          `json:"level"`
-	Message   SARIFMultiformat `json:"message"`
-	Locations []SARIFLocation `json:"locations,omitempty"`
-	Fixes     []SARIFFix      `json:"fixes,omitempty"`
+	RuleID    string               `json:"ruleId"`
+	Level     string               `json:"level"`
+	Message   SARIFMultiformat     `json:"message"`
+	Locations []SARIFLocation      `json:"locations,omitempty"`
+	Fixes     []SARIFFix           `json:"fixes,omitempty"`
+	Taxa      []SARIFTaxaReference `json:"taxa,omitempty"`
+}
+
+// SARIFTaxaReference references an external taxonomy entry (e.g., CWE).
+type SARIFTaxaReference struct {
+	ID            string           `json:"id"`
+	ToolComponent SARIFMultiformat `json:"toolComponent"`
 }
 
 type SARIFLocation struct {
@@ -123,6 +130,13 @@ func FormatSARIF(findings []Finding) (string, error) {
 		if f.Fix != "" {
 			result.Fixes = append(result.Fixes, SARIFFix{
 				Description: SARIFMultiformat{Text: f.Fix},
+			})
+		}
+
+		if f.CWE != "" {
+			result.Taxa = append(result.Taxa, SARIFTaxaReference{
+				ID:            f.CWE,
+				ToolComponent: SARIFMultiformat{Text: "CWE"},
 			})
 		}
 

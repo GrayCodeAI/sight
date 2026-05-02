@@ -35,6 +35,7 @@ type Finding struct {
 	Message   string   `json:"message"`
 	Fix       string   `json:"fix,omitempty"`
 	Reasoning string   `json:"reasoning,omitempty"`
+	CWE       string   `json:"cwe,omitempty"`
 }
 
 // InlineComment is a finding mapped to an exact position in a diff, ready for

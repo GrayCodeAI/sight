@@ -64,6 +64,9 @@ func ApplyFileConfig(fc *FileConfig) []Option {
 	if fc.Parallel != nil {
 		opts = append(opts, WithParallel(*fc.Parallel))
 	}
+	if len(fc.Exclude) > 0 {
+		opts = append(opts, WithExclude(fc.Exclude...))
+	}
 
 	return opts
 }

@@ -2,7 +2,9 @@ package sight
 
 import (
 	"context"
+	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,6 +44,14 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 		return &Result{Report: "No reviewable changes found."}, nil
 	}
 
+	// Filter excluded files before sending to LLM
+	if len(r.cfg.exclude) > 0 {
+		files = filterFiles(files, r.cfg.exclude)
+		if len(files) == 0 {
+			return &Result{Report: "All changed files matched exclude patterns."}, nil
+		}
+	}
+
 	// Gather git context if enabled
 	var gitContextStr string
 	if r.cfg.gitContext {
@@ -74,9 +84,14 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 		var concernTokens int
 
 		for _, chunk := range chunks {
-			prompt := review.BuildPrompt(concern, chunk, r.cfg.contextLines)
+			prompt := review.BuildPromptEnhanced(concern, chunk, r.cfg.contextLines)
 			if gitContextStr != "" {
 				prompt += gitContextStr
+			}
+
+			systemPrompt := review.SystemPrompt(concern)
+			if r.cfg.projectRules != "" {
+				systemPrompt += "\n\n## Project Rules\n\nThe following project-specific rules and coding standards MUST be respected:\n\n" + r.cfg.projectRules
 			}
 
 			resp, err := r.cfg.provider.Chat(ctx, []Message{
@@ -85,7 +100,7 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 				Model:       r.cfg.model,
 				MaxTokens:   r.cfg.maxTokens,
 				Temperature: 0.1,
-				System:      review.SystemPrompt(concern),
+				System:      systemPrompt,
 			})
 
 			if err != nil {
@@ -184,6 +199,7 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 			Message:   f.Message,
 			Fix:       f.Fix,
 			Reasoning: f.Reasoning,
+			CWE:       f.CWE,
 		}
 	}
 	outputStats := output.Stats{
@@ -224,6 +240,7 @@ func (r *Reviewer) ReviewFiles(ctx context.Context, files []FileChange) (*Result
 func toPublicFindings(internal []review.Finding) []Finding {
 	out := make([]Finding, len(internal))
 	for i, f := range internal {
+		cwe := review.MatchCWE(f.Message, f.Fix)
 		out[i] = Finding{
 			Concern:   f.Concern,
 			Severity:  Severity(f.Severity),
@@ -233,6 +250,7 @@ func toPublicFindings(internal []review.Finding) []Finding {
 			Message:   f.Message,
 			Fix:       f.Fix,
 			Reasoning: f.Reasoning,
+			CWE:       cwe,
 		}
 	}
 	return out
@@ -279,6 +297,43 @@ func countHunks(files []diff.File) int {
 	return total
 }
 
+// filterFiles removes files whose paths match any of the exclude patterns.
+// Patterns support exact basename matching and filepath.Match-style globs.
+func filterFiles(files []diff.File, patterns []string) []diff.File {
+	var result []diff.File
+	for _, f := range files {
+		if !matchesExclude(f.Path, patterns) {
+			result = append(result, f)
+		}
+	}
+	return result
+}
+
+// matchesExclude checks if a file path matches any exclusion pattern.
+// It checks both the full path and the basename against each pattern.
+func matchesExclude(path string, patterns []string) bool {
+	base := filepath.Base(path)
+	for _, pattern := range patterns {
+		// Check if the pattern contains a path separator — if so, match
+		// against the full path; otherwise match against the basename.
+		if strings.Contains(pattern, "/") {
+			if matched, _ := filepath.Match(pattern, path); matched {
+				return true
+			}
+		} else {
+			// Exact basename match
+			if base == pattern {
+				return true
+			}
+			// Glob match on basename
+			if matched, _ := filepath.Match(pattern, base); matched {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // reflect runs the self-reflection pass to validate findings.
 func (r *Reviewer) reflect(ctx context.Context, findings []Finding, rawDiff string, tokensUsed *int) []Finding {
 	internalFindings := make([]review.Finding, len(findings))
@@ -316,6 +371,6 @@ func (r *Reviewer) reflect(ctx context.Context, findings []Finding, rawDiff stri
 		return findings
 	}
 
-	validated := review.ApplyReflection(internalFindings, reflections)
+	validated := review.ApplyReflectionWithScore(internalFindings, reflections, r.cfg.minScore)
 	return toPublicFindings(validated)
 }

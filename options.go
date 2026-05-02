@@ -20,6 +20,23 @@ type config struct {
 	symbols      bool
 	parallel     bool
 	reflection   bool
+	exclude      []string
+	minScore     int
+	projectRules string
+}
+
+// defaultExclude is the default set of file patterns excluded from review.
+// These are generated files, lock files, and minified assets that produce
+// noise and waste tokens.
+var defaultExclude = []string{
+	"go.sum",
+	"package-lock.json",
+	"yarn.lock",
+	"pnpm-lock.yaml",
+	"*.min.js",
+	"*.min.css",
+	"*.map",
+	"*.generated.*",
 }
 
 func defaultConfig() *config {
@@ -31,6 +48,8 @@ func defaultConfig() *config {
 		gitContext:   true,
 		symbols:      true,
 		parallel:     true,
+		exclude:      defaultExclude,
+		minScore:     3,
 	}
 }
 
@@ -125,4 +144,25 @@ func WithParallel(enabled bool) Option {
 
 func WithReflection(enabled bool) Option {
 	return optFunc(func(c *config) { c.reflection = enabled })
+}
+
+// WithExclude sets file path patterns to exclude from review.
+// Patterns support exact basenames ("go.sum") and glob wildcards ("*.min.js", "*.generated.*").
+func WithExclude(patterns ...string) Option {
+	return optFunc(func(c *config) { c.exclude = patterns })
+}
+
+// WithMinScore sets the minimum reflection score threshold (1-10).
+// Findings scoring below this are filtered out during the reflection pass.
+func WithMinScore(n int) Option {
+	return optFunc(func(c *config) {
+		if n >= 1 && n <= 10 {
+			c.minScore = n
+		}
+	})
+}
+
+// WithProjectRules injects project-specific rules into the LLM system prompt.
+func WithProjectRules(rules string) Option {
+	return optFunc(func(c *config) { c.projectRules = rules })
 }
