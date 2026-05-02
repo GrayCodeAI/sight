@@ -110,7 +110,10 @@ func Review(ctx context.Context, diff string, opts ...Option) (*Result, error) {
 }
 
 // ErrNoProvider is returned when Review is called without a Provider configured.
-var ErrNoProvider = errors.New("sight: no LLM provider configured; use WithProvider()")
+var ErrNoProvider = errors.New("sight: no provider configured; use WithProvider()")
 
 // ErrEmptyDiff is returned when the input diff is empty.
-var ErrEmptyDiff = errors.New("sight: empty diff provided")
+var ErrEmptyDiff = errors.New("sight: empty diff; nothing to review")
+
+// ErrContextCancelled is returned when the context is cancelled during review.
+var ErrContextCancelled = errors.New("sight: context cancelled")

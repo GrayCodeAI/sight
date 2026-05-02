@@ -8,24 +8,10 @@ import (
 	"time"
 )
 
-// Severity mirrors the public type.
-type Severity int
-
-const (
-	SeverityInfo Severity = iota
-	SeverityLow
-	SeverityMedium
-	SeverityHigh
-	SeverityCritical
-)
-
-var severityNames = [...]string{"INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"}
-var severityColors = [...]string{"\033[36m", "\033[34m", "\033[33m", "\033[31m", "\033[35;1m"}
-
-// Finding for rendering (generic interface).
+// Finding for rendering.
 type Finding struct {
 	Concern   string
-	Severity  Severity
+	Severity  int
 	File      string
 	Line      int
 	EndLine   int
@@ -39,43 +25,116 @@ type Stats struct {
 	FilesReviewed      int
 	HunksAnalyzed      int
 	FindingsTotal      int
-	BySeverity         map[Severity]int
+	BySeverity         map[int]int
 	ByConcern          map[string]int
 	TokensUsed         int
 	DurationPerConcern map[string]time.Duration
 }
 
-// FormatTerminal renders a human-readable review report.
-func FormatTerminal(findings interface{}, stats interface{}) string {
+var severityNames = [...]string{"INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"}
+var severityColors = [...]string{"\033[36m", "\033[34m", "\033[33m", "\033[31m", "\033[35;1m"}
+
+const reset = "\033[0m"
+const bold = "\033[1m"
+const dim = "\033[2m"
+
+// FormatTerminal renders a human-readable review report with ANSI colors.
+func FormatTerminal(findings []Finding, stats Stats) string {
 	var b strings.Builder
-	reset := "\033[0m"
 
 	b.WriteString("\n")
-	b.WriteString("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-	b.WriteString("  SIGHT CODE REVIEW\n")
-	b.WriteString("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
+	b.WriteString(bold + "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" + reset + "\n")
+	b.WriteString(bold + "  SIGHT CODE REVIEW" + reset + "\n")
+	b.WriteString(fmt.Sprintf("  %d files, %d hunks analyzed", stats.FilesReviewed, stats.HunksAnalyzed))
+	if stats.TokensUsed > 0 {
+		b.WriteString(fmt.Sprintf(" (%d tokens used)", stats.TokensUsed))
+	}
+	b.WriteString("\n")
+	b.WriteString(bold + "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" + reset + "\n\n")
 
-	// Type assert to the sight package types
-	type findingLike struct {
-		Concern   string
-		Severity  int
-		File      string
-		Line      int
-		Message   string
-		Fix       string
-		Reasoning string
+	if len(findings) == 0 {
+		b.WriteString("  \033[32m✓ No issues found.\033[0m\n\n")
+		return b.String()
 	}
 
-	// Use a simple approach - format based on passed data
-	b.WriteString("  Review complete.\n")
-	b.WriteString(fmt.Sprintf("%s", reset))
-	b.WriteString("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+	grouped := map[int][]Finding{}
+	order := []int{4, 3, 2, 1, 0} // critical, high, medium, low, info
+	for _, f := range findings {
+		grouped[f.Severity] = append(grouped[f.Severity], f)
+	}
+
+	for _, sev := range order {
+		items := grouped[sev]
+		if len(items) == 0 {
+			continue
+		}
+		color := "\033[36m"
+		if sev < len(severityColors) {
+			color = severityColors[sev]
+		}
+		name := "UNKNOWN"
+		if sev < len(severityNames) {
+			name = severityNames[sev]
+		}
+
+		b.WriteString(fmt.Sprintf("  %s%s%s (%d)\n\n", color+bold, name, reset, len(items)))
+
+		for _, f := range items {
+			loc := f.File
+			if f.Line > 0 {
+				loc = fmt.Sprintf("%s:%d", f.File, f.Line)
+				if f.EndLine > 0 && f.EndLine != f.Line {
+					loc = fmt.Sprintf("%s:%d-%d", f.File, f.Line, f.EndLine)
+				}
+			}
+
+			b.WriteString(fmt.Sprintf("    %s%s%s %s\n", color, "●", reset, f.Message))
+			b.WriteString(fmt.Sprintf("      %s%s%s", dim, loc, reset))
+			if f.Concern != "" {
+				b.WriteString(fmt.Sprintf("  %s[%s]%s", dim, f.Concern, reset))
+			}
+			b.WriteString("\n")
+
+			if f.Reasoning != "" {
+				b.WriteString(fmt.Sprintf("      %s▸ %s%s\n", dim, f.Reasoning, reset))
+			}
+			if f.Fix != "" {
+				b.WriteString(fmt.Sprintf("      %s⚡ Fix: %s%s\n", "\033[32m", f.Fix, reset))
+			}
+			b.WriteString("\n")
+		}
+	}
+
+	b.WriteString(bold + "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" + reset + "\n")
+	b.WriteString(fmt.Sprintf("  SUMMARY: %d findings", len(findings)))
+
+	parts := []string{}
+	for _, sev := range order {
+		count := stats.BySeverity[sev]
+		if count > 0 {
+			name := severityNames[sev]
+			parts = append(parts, fmt.Sprintf("%d %s", count, name))
+		}
+	}
+	if len(parts) > 0 {
+		b.WriteString(" (" + strings.Join(parts, ", ") + ")")
+	}
+	b.WriteString("\n")
+
+	if len(stats.DurationPerConcern) > 0 {
+		dParts := []string{}
+		for name, d := range stats.DurationPerConcern {
+			dParts = append(dParts, fmt.Sprintf("%s:%s", name, d.Round(time.Millisecond)))
+		}
+		b.WriteString(fmt.Sprintf("  %sTiming: %s%s\n", dim, strings.Join(dParts, " | "), reset))
+	}
+	b.WriteString(bold + "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" + reset + "\n")
 
 	return b.String()
 }
 
 // FormatJSON renders findings as machine-readable JSON.
-func FormatJSON(findings interface{}) (string, error) {
+func FormatJSON(findings []Finding) (string, error) {
 	out, err := json.MarshalIndent(findings, "", "  ")
 	if err != nil {
 		return "", err
@@ -83,18 +142,28 @@ func FormatJSON(findings interface{}) (string, error) {
 	return string(out), nil
 }
 
-// FormatGitHubComment formats a finding as a GitHub PR review comment body.
-func FormatGitHubComment(message, fix, reasoning string, severity string) string {
-	var b strings.Builder
-
-	b.WriteString(fmt.Sprintf("**[%s]** %s\n", strings.ToUpper(severity), message))
-
-	if reasoning != "" {
-		b.WriteString(fmt.Sprintf("\n> %s\n", reasoning))
+// FormatGitHubReview formats all findings as a single GitHub PR review body.
+func FormatGitHubReview(findings []Finding) string {
+	if len(findings) == 0 {
+		return "✅ No issues found."
 	}
 
-	if fix != "" {
-		b.WriteString(fmt.Sprintf("\n**Suggested fix:**\n```suggestion\n%s\n```\n", fix))
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("## Sight Review — %d findings\n\n", len(findings)))
+
+	for _, f := range findings {
+		sev := "INFO"
+		if f.Severity < len(severityNames) {
+			sev = severityNames[f.Severity]
+		}
+		loc := f.File
+		if f.Line > 0 {
+			loc = fmt.Sprintf("%s:%d", f.File, f.Line)
+		}
+		b.WriteString(fmt.Sprintf("- **[%s]** `%s` — %s\n", sev, loc, f.Message))
+		if f.Fix != "" {
+			b.WriteString(fmt.Sprintf("  - Fix: %s\n", f.Fix))
+		}
 	}
 
 	return b.String()
