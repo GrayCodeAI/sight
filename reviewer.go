@@ -1,0 +1,199 @@
+package sight
+
+import (
+	"context"
+	"sort"
+	"sync"
+	"time"
+
+	"github.com/GrayCodeAI/sight/internal/comment"
+	"github.com/GrayCodeAI/sight/internal/diff"
+	"github.com/GrayCodeAI/sight/internal/output"
+	"github.com/GrayCodeAI/sight/internal/review"
+)
+
+// Reviewer is a reusable code reviewer. Create one with NewReviewer and call
+// Review multiple times. It is safe for concurrent use.
+type Reviewer struct {
+	cfg *config
+	mu  sync.Mutex
+}
+
+// NewReviewer creates a configured Reviewer.
+func NewReviewer(opts ...Option) *Reviewer {
+	return &Reviewer{cfg: buildConfig(opts)}
+}
+
+// Review parses the diff, builds context, and runs multi-concern analysis.
+func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) {
+	if r.cfg.provider == nil {
+		return nil, ErrNoProvider
+	}
+	if rawDiff == "" {
+		return nil, ErrEmptyDiff
+	}
+
+	files := diff.Parse(rawDiff)
+	if len(files) == 0 {
+		return &Result{Report: "No reviewable changes found."}, nil
+	}
+
+	concerns := review.BuildConcerns(r.cfg.concerns)
+
+	var (
+		mu          sync.Mutex
+		allFindings []Finding
+		tokensUsed  int
+		durations   = make(map[string]time.Duration)
+	)
+
+	runConcern := func(concern review.Concern) {
+		start := time.Now()
+		prompt := review.BuildPrompt(concern, files, r.cfg.contextLines)
+
+		resp, err := r.cfg.provider.Chat(ctx, []Message{
+			{Role: "user", Content: prompt},
+		}, ChatOpts{
+			Model:       r.cfg.model,
+			MaxTokens:   r.cfg.maxTokens,
+			Temperature: 0.1,
+			System:      review.SystemPrompt(concern),
+		})
+
+		if err != nil {
+			mu.Lock()
+			durations[concern.Name] = time.Since(start)
+			mu.Unlock()
+			return
+		}
+
+		findings := review.ParseResponse(resp.Content, concern.Name)
+
+		mu.Lock()
+		allFindings = append(allFindings, toPublicFindings(findings)...)
+		tokensUsed += resp.TokensUsed
+		durations[concern.Name] = time.Since(start)
+		mu.Unlock()
+	}
+
+	if r.cfg.parallel && len(concerns) > 1 {
+		var wg sync.WaitGroup
+		for _, concern := range concerns {
+			wg.Add(1)
+			go func(c review.Concern) {
+				defer wg.Done()
+				runConcern(c)
+			}(concern)
+		}
+		wg.Wait()
+	} else {
+		for _, concern := range concerns {
+			runConcern(concern)
+		}
+	}
+
+	allFindings = dedup(allFindings)
+	sort.Slice(allFindings, func(i, j int) bool {
+		if allFindings[i].Severity != allFindings[j].Severity {
+			return allFindings[i].Severity > allFindings[j].Severity
+		}
+		if allFindings[i].File != allFindings[j].File {
+			return allFindings[i].File < allFindings[j].File
+		}
+		return allFindings[i].Line < allFindings[j].Line
+	})
+
+	comments := comment.MapToInline(allFindings, files)
+
+	bySev := make(map[Severity]int)
+	byConcern := make(map[string]int)
+	for _, f := range allFindings {
+		bySev[f.Severity]++
+		byConcern[f.Concern]++
+	}
+
+	result := &Result{
+		Findings: allFindings,
+		Comments: toPublicComments(comments),
+		Stats: Stats{
+			FilesReviewed:      len(files),
+			HunksAnalyzed:      countHunks(files),
+			FindingsTotal:      len(allFindings),
+			BySeverity:         bySev,
+			ByConcern:          byConcern,
+			TokensUsed:         tokensUsed,
+			DurationPerConcern: durations,
+		},
+		FailOn: r.cfg.failOn,
+	}
+	result.Report = output.FormatTerminal(allFindings, result.Stats)
+
+	return result, nil
+}
+
+// ReviewFiles reviews a set of file changes with explicit content.
+func (r *Reviewer) ReviewFiles(ctx context.Context, files []FileChange) (*Result, error) {
+	if r.cfg.provider == nil {
+		return nil, ErrNoProvider
+	}
+	combined := diff.CombineFileChanges(files)
+	return r.Review(ctx, combined)
+}
+
+func toPublicFindings(internal []review.Finding) []Finding {
+	out := make([]Finding, len(internal))
+	for i, f := range internal {
+		out[i] = Finding{
+			Concern:   f.Concern,
+			Severity:  Severity(f.Severity),
+			File:      f.File,
+			Line:      f.Line,
+			EndLine:   f.EndLine,
+			Message:   f.Message,
+			Fix:       f.Fix,
+			Reasoning: f.Reasoning,
+		}
+	}
+	return out
+}
+
+func toPublicComments(internal []comment.Inline) []InlineComment {
+	out := make([]InlineComment, len(internal))
+	for i, c := range internal {
+		out[i] = InlineComment{
+			Path:       c.Path,
+			StartLine:  c.StartLine,
+			EndLine:    c.EndLine,
+			Body:       c.Body,
+			Suggestion: c.Suggestion,
+		}
+	}
+	return out
+}
+
+func dedup(findings []Finding) []Finding {
+	type key struct {
+		file    string
+		line    int
+		message string
+	}
+	seen := make(map[key]bool)
+	var result []Finding
+	for _, f := range findings {
+		k := key{file: f.File, line: f.Line, message: f.Message}
+		if seen[k] {
+			continue
+		}
+		seen[k] = true
+		result = append(result, f)
+	}
+	return result
+}
+
+func countHunks(files []diff.File) int {
+	total := 0
+	for _, f := range files {
+		total += len(f.Hunks)
+	}
+	return total
+}
