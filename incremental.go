@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 )
 
 // IncrementalState tracks the last-reviewed commit SHA for incremental reviews.
@@ -50,7 +51,7 @@ func ReviewIncremental(ctx context.Context, base, head string, state *Incrementa
 		}
 	}
 
-	diffText, err := gitDiffRange(base, head)
+	diffText, err := gitDiffRange(ctx, base, head)
 	if err != nil {
 		return nil, fmt.Errorf("sight: incremental diff failed: %w", err)
 	}
@@ -76,16 +77,23 @@ func ReviewIncremental(ctx context.Context, base, head string, state *Incrementa
 	return result, nil
 }
 
-// gitDiffRange runs `git diff base...head` and returns the output.
-func gitDiffRange(base, head string) (string, error) {
+// gitDiffRange runs `git diff base...head` with a context timeout.
+func gitDiffRange(ctx context.Context, base, head string) (string, error) {
+	// Default 30s timeout if context has no deadline
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+	}
+
 	// Try three-dot syntax first (merge-base diff)
-	out, err := exec.Command("git", "diff", base+"..."+head).Output()
+	out, err := exec.CommandContext(ctx, "git", "diff", base+"..."+head).Output()
 	if err == nil {
 		return string(out), nil
 	}
 
 	// Fall back to two-dot syntax
-	out, err = exec.Command("git", "diff", base, head).Output()
+	out, err = exec.CommandContext(ctx, "git", "diff", base, head).Output()
 	if err != nil {
 		return "", fmt.Errorf("git diff %s %s failed: %w", base, head, err)
 	}
