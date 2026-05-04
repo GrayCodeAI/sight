@@ -56,7 +56,6 @@ func FilterFindings(ctx context.Context, provider Provider, findings []Finding,
 	sem := make(chan struct{}, config.MaxParallel)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	var firstErr error
 
 	for i, finding := range toFilter {
 		wg.Add(1)
@@ -92,9 +91,6 @@ func FilterFindings(ctx context.Context, provider Provider, findings []Finding,
 		}
 	}
 
-	if firstErr != nil {
-		return confirmed, results, firstErr
-	}
 	return confirmed, results, nil
 }
 

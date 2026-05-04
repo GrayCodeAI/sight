@@ -91,7 +91,7 @@ func findConfigFile(dir string) string {
 }
 
 // parseTOMLConfig parses a simplified TOML format.
-// Supports key = "value", key = true/false, key = 123, and [section] headers.
+// Supports key = "value", key = true/false, key = 123, arrays, and [section] headers.
 func parseTOMLConfig(content string) (*FileConfig, error) {
 	cfg := &FileConfig{
 		Prompts: make(map[string]string),
@@ -109,13 +109,10 @@ func parseTOMLConfig(content string) (*FileConfig, error) {
 			continue
 		}
 
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
+		key, value, ok := parseTOMLKeyValue(line)
+		if !ok {
 			continue
 		}
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-		value = strings.Trim(value, `"'`)
 
 		if section == "prompts" {
 			cfg.Prompts[key] = value
@@ -148,6 +145,25 @@ func parseTOMLConfig(content string) (*FileConfig, error) {
 	}
 
 	return cfg, nil
+}
+
+// parseTOMLKeyValue splits a TOML line into key and value, handling quoted values
+// that may contain '=' signs.
+func parseTOMLKeyValue(line string) (key, value string, ok bool) {
+	idx := strings.Index(line, "=")
+	if idx < 0 {
+		return "", "", false
+	}
+	key = strings.TrimSpace(line[:idx])
+	value = strings.TrimSpace(line[idx+1:])
+	// Strip matching outer quotes
+	if len(value) >= 2 {
+		if (value[0] == '"' && value[len(value)-1] == '"') ||
+			(value[0] == '\'' && value[len(value)-1] == '\'') {
+			value = value[1 : len(value)-1]
+		}
+	}
+	return key, value, key != ""
 }
 
 func parseTOMLArray(s string) []string {
