@@ -19,7 +19,6 @@ import (
 // Review multiple times. It is safe for concurrent use.
 type Reviewer struct {
 	cfg *config
-	mu  sync.Mutex
 }
 
 // NewReviewer creates a configured Reviewer.
