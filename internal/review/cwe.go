@@ -90,16 +90,43 @@ var cweDatabase = []CWEMapping{
 
 // MatchCWE checks a finding's message (and fix) against the CWE database and
 // returns the CWE ID if a match is found. Returns empty string if no match.
+// Uses word boundary checks to avoid false positives from substring matching.
 func MatchCWE(message, fix string) string {
 	lower := strings.ToLower(message + " " + fix)
 	for _, cwe := range cweDatabase {
 		for _, keyword := range cwe.Keywords {
-			if strings.Contains(lower, keyword) {
+			if containsWordBoundary(lower, keyword) {
 				return cwe.ID
 			}
 		}
 	}
 	return ""
+}
+
+// containsWordBoundary checks if text contains keyword at a word boundary.
+// A word boundary is the start/end of string or a non-alphanumeric character.
+func containsWordBoundary(text, keyword string) bool {
+	idx := 0
+	for {
+		pos := strings.Index(text[idx:], keyword)
+		if pos < 0 {
+			return false
+		}
+		pos += idx
+		// Check left boundary
+		leftOK := pos == 0 || !isWordChar(text[pos-1])
+		// Check right boundary
+		end := pos + len(keyword)
+		rightOK := end >= len(text) || !isWordChar(text[end])
+		if leftOK && rightOK {
+			return true
+		}
+		idx = pos + 1
+	}
+}
+
+func isWordChar(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }
 
 // LookupCWEName returns the human-readable name for a CWE ID.

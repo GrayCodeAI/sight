@@ -43,7 +43,13 @@ Adjust severity when:
 - A "critical" finding is actually just a code smell → downgrade
 - A "low" finding is actually exploitable → upgrade`
 
+// maxReflectPromptSize is the maximum allowed size for a reflection prompt.
+// This prevents oversized output from consuming excessive tokens.
+const maxReflectPromptSize = 100_000
+
 // BuildReflectPrompt constructs the prompt for self-reflection.
+// Returns an empty string if the resulting prompt exceeds maxReflectPromptSize,
+// indicating reflection should be skipped.
 func BuildReflectPrompt(findings []Finding, diffContext string) string {
 	var b strings.Builder
 	b.WriteString("Review these findings for accuracy. The original diff context is provided below.\n\n")
@@ -66,7 +72,13 @@ func BuildReflectPrompt(findings []Finding, diffContext string) string {
 	}
 	b.WriteString("```\n")
 
-	return b.String()
+	result := b.String()
+	// Reject if the prompt exceeds the maximum allowed size
+	if len(result) > maxReflectPromptSize {
+		return ""
+	}
+
+	return result
 }
 
 // ReflectResult holds the LLM's validation of a finding.

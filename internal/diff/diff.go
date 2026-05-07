@@ -107,6 +107,24 @@ func parseFileChunk(chunk string) File {
 	lines := strings.Split(chunk, "\n")
 	file := File{}
 
+	// Detect binary files — git outputs "Binary files ... differ" for them
+	for _, line := range lines {
+		if strings.HasPrefix(line, "Binary files") && strings.Contains(line, "differ") {
+			// Binary file: extract path but skip hunk parsing
+			for _, l := range lines {
+				if strings.HasPrefix(l, "+++ b/") {
+					file.Path = strings.TrimPrefix(l, "+++ b/")
+				} else if strings.HasPrefix(l, "--- a/") {
+					file.OldPath = strings.TrimPrefix(l, "--- a/")
+				}
+			}
+			if file.Path == "" && file.OldPath != "" {
+				file.Path = file.OldPath
+			}
+			return file
+		}
+	}
+
 	for i, line := range lines {
 		switch {
 		case strings.HasPrefix(line, "--- a/"):
@@ -124,6 +142,10 @@ func parseFileChunk(chunk string) File {
 			file.Path = strings.TrimPrefix(line, "rename to ")
 		case strings.HasPrefix(line, "@@"):
 			hunk := parseHunkHeader(line)
+			// Validate line number bounds before parsing
+			if hunk.NewStart < 0 || hunk.OldStart < 0 || hunk.NewCount < 0 || hunk.OldCount < 0 {
+				continue
+			}
 			hunk.Lines = parseHunkLines(lines[i+1:])
 			file.Hunks = append(file.Hunks, hunk)
 		}

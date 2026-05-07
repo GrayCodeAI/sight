@@ -2,6 +2,7 @@ package sight
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -43,6 +44,11 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 		return &Result{Report: "No reviewable changes found."}, nil
 	}
 
+	// Normalize file paths
+	for i := range files {
+		files[i].Path = filepath.Clean(files[i].Path)
+	}
+
 	// Filter excluded files before sending to LLM
 	if len(r.cfg.exclude) > 0 {
 		files = filterFiles(files, r.cfg.exclude)
@@ -54,9 +60,11 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 	// Gather git context if enabled
 	var gitContextStr string
 	if r.cfg.gitContext {
-		filePaths := make([]string, len(files))
-		for i, f := range files {
-			filePaths[i] = f.Path
+		var filePaths []string
+		for _, f := range files {
+			if f.Path != "" {
+				filePaths = append(filePaths, f.Path)
+			}
 		}
 		contexts := gitctx.Enrich(filePaths)
 		gitContextStr = gitctx.FormatContext(contexts)
@@ -73,6 +81,7 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 		allFindings []Finding
 		tokensUsed  int
 		durations   = make(map[string]time.Duration)
+		llmErrors   []string
 	)
 
 	// Token budget: estimate prompt size and chunk if needed
@@ -85,6 +94,7 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 
 		var concernFindings []review.Finding
 		var concernTokens int
+		var concernErrors []string
 
 		for _, chunk := range chunks {
 			prompt := review.BuildPromptEnhanced(concern, chunk, r.cfg.contextLines)
@@ -107,6 +117,7 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 			})
 
 			if err != nil {
+				concernErrors = append(concernErrors, fmt.Sprintf("[%s] %v", concern.Name, err))
 				continue
 			}
 
@@ -119,6 +130,7 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 		allFindings = append(allFindings, toPublicFindings(concernFindings)...)
 		tokensUsed += concernTokens
 		durations[concern.Name] = time.Since(start)
+		llmErrors = append(llmErrors, concernErrors...)
 		mu.Unlock()
 	}
 
@@ -219,6 +231,14 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 	}
 	result.Report = output.FormatTerminal(outputFindings, outputStats)
 
+	// Include LLM errors in the report if any occurred
+	if len(llmErrors) > 0 {
+		result.Report += "\n\nLLM provider errors (" + fmt.Sprintf("%d", len(llmErrors)) + "):\n"
+		for _, e := range llmErrors {
+			result.Report += "  - " + e + "\n"
+		}
+	}
+
 	return result, nil
 }
 
@@ -281,16 +301,23 @@ func dedup(findings []Finding) []Finding {
 	type key struct {
 		file    string
 		line    int
+		concern string
 		message string
 	}
 	seen := make(map[key]bool)
 	var result []Finding
 	for _, f := range findings {
-		k := key{file: f.File, line: f.Line, message: f.Message}
-		if seen[k] {
+		// Use file+line+concern+message for unique identification.
+		// If two different concerns produce the exact same message for the same
+		// location, keep only the first (higher severity wins due to sort order).
+		k := key{file: f.File, line: f.Line, concern: f.Concern, message: f.Message}
+		// Also check without concern for cross-concern dedup of identical findings
+		kNoConcern := key{file: f.File, line: f.Line, message: f.Message}
+		if seen[k] || seen[kNoConcern] {
 			continue
 		}
 		seen[k] = true
+		seen[kNoConcern] = true
 		result = append(result, f)
 	}
 	return result
