@@ -7,6 +7,24 @@ import (
 	"strings"
 )
 
+// maxFieldLen is the maximum length for extracted regex fields to prevent
+// unbounded memory consumption from malformed LLM output.
+const maxFieldLen = 2000
+
+// Package-level compiled regexes for regex extraction (avoids recompilation in hot path).
+var (
+	regexFileRe   = regexp.MustCompile(`"file"\s*:\s*"([^"]+)"`)
+	regexLineRe   = regexp.MustCompile(`"line"\s*:\s*(\d+)`)
+	regexSevRe    = regexp.MustCompile(`"severity"\s*:\s*"([^"]+)"`)
+	regexMsgRe    = regexp.MustCompile(`"message"\s*:\s*"([^"]+)"`)
+	regexFixRe    = regexp.MustCompile(`"fix"\s*:\s*"([^"]+)"`)
+	regexReasonRe = regexp.MustCompile(`"reasoning"\s*:\s*"([^"]+)"`)
+	regexCweRe    = regexp.MustCompile(`"cwe"\s*:\s*"([^"]*)"`)
+	regexBlockRe  = regexp.MustCompile(`\{[^{}]+\}`)
+	// trailingCommaRe strips trailing commas before ] and } in JSON.
+	trailingCommaRe = regexp.MustCompile(`,\s*([}\]])`)
+)
+
 // rawFinding represents the JSON structure expected from the LLM.
 type rawFinding struct {
 	File      string `json:"file"`
@@ -114,8 +132,7 @@ func lenientJSON(s string) string {
 	s = result.String()
 
 	// Strip trailing commas before ] and }.
-	re := regexp.MustCompile(`,\s*([}\]])`)
-	s = re.ReplaceAllString(s, "$1")
+	s = trailingCommaRe.ReplaceAllString(s, "$1")
 
 	return s
 }
@@ -123,48 +140,40 @@ func lenientJSON(s string) string {
 // regexExtractFindings attempts to extract findings via regex when JSON parsing
 // fails entirely. It looks for file, line, severity, and message patterns.
 func regexExtractFindings(s string, concernName string) []Finding {
-	fileRe := regexp.MustCompile(`"file"\s*:\s*"([^"]+)"`)
-	lineRe := regexp.MustCompile(`"line"\s*:\s*(\d+)`)
-	sevRe := regexp.MustCompile(`"severity"\s*:\s*"([^"]+)"`)
-	msgRe := regexp.MustCompile(`"message"\s*:\s*"([^"]+)"`)
-	fixRe := regexp.MustCompile(`"fix"\s*:\s*"([^"]+)"`)
-	reasonRe := regexp.MustCompile(`"reasoning"\s*:\s*"([^"]+)"`)
-	cweRe := regexp.MustCompile(`"cwe"\s*:\s*"([^"]*)"`)
-
 	// Split on object boundaries to find individual findings.
 	// We look for blocks that contain at least "file" and "message".
-	blocks := regexp.MustCompile(`\{[^{}]+\}`).FindAllString(s, -1)
+	blocks := regexBlockRe.FindAllString(s, -1)
 	if len(blocks) == 0 {
 		return nil
 	}
 
 	var findings []Finding
 	for _, block := range blocks {
-		fileMatch := fileRe.FindStringSubmatch(block)
-		msgMatch := msgRe.FindStringSubmatch(block)
+		fileMatch := regexFileRe.FindStringSubmatch(block)
+		msgMatch := regexMsgRe.FindStringSubmatch(block)
 		if fileMatch == nil || msgMatch == nil {
 			continue
 		}
 
 		f := Finding{
 			Concern: concernName,
-			File:    fileMatch[1],
-			Message: msgMatch[1],
+			File:    capStr(fileMatch[1], maxFieldLen),
+			Message: capStr(msgMatch[1], maxFieldLen),
 		}
 
-		if lineMatch := lineRe.FindStringSubmatch(block); lineMatch != nil {
+		if lineMatch := regexLineRe.FindStringSubmatch(block); lineMatch != nil {
 			f.Line, _ = strconv.Atoi(lineMatch[1])
 		}
-		if sevMatch := sevRe.FindStringSubmatch(block); sevMatch != nil {
+		if sevMatch := regexSevRe.FindStringSubmatch(block); sevMatch != nil {
 			f.Severity = parseSeverity(sevMatch[1])
 		}
-		if fixMatch := fixRe.FindStringSubmatch(block); fixMatch != nil {
-			f.Fix = fixMatch[1]
+		if fixMatch := regexFixRe.FindStringSubmatch(block); fixMatch != nil {
+			f.Fix = capStr(fixMatch[1], maxFieldLen)
 		}
-		if reasonMatch := reasonRe.FindStringSubmatch(block); reasonMatch != nil {
-			f.Reasoning = reasonMatch[1]
+		if reasonMatch := regexReasonRe.FindStringSubmatch(block); reasonMatch != nil {
+			f.Reasoning = capStr(reasonMatch[1], maxFieldLen)
 		}
-		if cweMatch := cweRe.FindStringSubmatch(block); cweMatch != nil {
+		if cweMatch := regexCweRe.FindStringSubmatch(block); cweMatch != nil {
 			f.CWE = cweMatch[1]
 		}
 
@@ -172,6 +181,14 @@ func regexExtractFindings(s string, concernName string) []Finding {
 	}
 
 	return findings
+}
+
+// capStr truncates s to maxLen if it exceeds maxLen.
+func capStr(s string, maxLen int) string {
+	if len(s) > maxLen {
+		return s[:maxLen]
+	}
+	return s
 }
 
 // extractJSON finds and returns the JSON array from potentially wrapped response text.

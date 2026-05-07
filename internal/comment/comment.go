@@ -65,8 +65,16 @@ func MapToInlineFiltered(findings []FindingInput, files []diff.File, mode Filter
 	var comments []Inline
 	fileMap := buildFileMap(files)
 
+	// Pre-build line sets for O(1) lookup when using context or added modes
+	lineSetMap := make(map[string]diffLineSet)
+	if mode == FilterDiffContext || mode == FilterAdded {
+		for _, f := range files {
+			lineSetMap[f.Path] = buildDiffLineSet(f)
+		}
+	}
+
 	for _, f := range findings {
-		diffFile, exists := fileMap[f.File]
+		_, exists := fileMap[f.File]
 
 		switch mode {
 		case FilterNone:
@@ -81,15 +89,19 @@ func MapToInlineFiltered(findings []FindingInput, files []diff.File, mode Filter
 
 		case FilterDiffContext:
 			// Include if the line falls within any hunk's full range
-			// (added, removed, or context lines)
-			if exists && isInDiffContext(diffFile, f.Line) {
-				comments = append(comments, buildComment(f))
+			// (added, removed, or context lines) — O(1) lookup
+			if exists {
+				if ls, ok := lineSetMap[f.File]; ok && ls.contextLines[f.Line] {
+					comments = append(comments, buildComment(f))
+				}
 			}
 
 		default: // FilterAdded
-			// Include only if the line is within the diff's new-side range
-			if exists && isInDiff(diffFile, f.Line) {
-				comments = append(comments, buildComment(f))
+			// Include only if the line is within the diff's new-side range — O(1) lookup
+			if exists {
+				if ls, ok := lineSetMap[f.File]; ok && ls.newRangeLines[f.Line] {
+					comments = append(comments, buildComment(f))
+				}
 			}
 		}
 	}
@@ -103,6 +115,36 @@ func buildFileMap(files []diff.File) map[string]diff.File {
 		m[f.Path] = f
 	}
 	return m
+}
+
+// diffLineSet holds precomputed line number sets for O(1) lookup.
+type diffLineSet struct {
+	newRangeLines map[int]bool // lines within new-side hunk ranges
+	contextLines  map[int]bool // lines within context ranges or individual line refs
+}
+
+func buildDiffLineSet(file diff.File) diffLineSet {
+	s := diffLineSet{
+		newRangeLines: make(map[int]bool),
+		contextLines:  make(map[int]bool),
+	}
+	for _, hunk := range file.Hunks {
+		start := hunk.NewStart
+		end := hunk.NewStart + hunk.NewCount
+		for i := start; i <= end; i++ {
+			s.newRangeLines[i] = true
+			s.contextLines[i] = true
+		}
+		for _, l := range hunk.Lines {
+			if l.NewNum > 0 {
+				s.contextLines[l.NewNum] = true
+			}
+			if l.OldNum > 0 {
+				s.contextLines[l.OldNum] = true
+			}
+		}
+	}
+	return s
 }
 
 func isInDiff(file diff.File, line int) bool {

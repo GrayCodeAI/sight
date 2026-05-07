@@ -3,6 +3,7 @@ package sight
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -180,14 +181,28 @@ func parseTOMLArray(s string) []string {
 	return result
 }
 
+// parseInt parses a string as an integer with range validation.
+// It reads leading digits (ignoring trailing non-digit chars for TOML compat)
+// and caps the result at 1,000,000 to prevent unreasonable values.
 func parseInt(s string) int {
-	n := 0
-	for _, c := range s {
-		if c >= '0' && c <= '9' {
-			n = n*10 + int(c-'0')
-		} else {
-			break
-		}
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0
+	}
+	// Extract leading digits
+	end := 0
+	for end < len(s) && s[end] >= '0' && s[end] <= '9' {
+		end++
+	}
+	if end == 0 {
+		return 0
+	}
+	n, err := strconv.Atoi(s[:end])
+	if err != nil {
+		return 0
+	}
+	if n < 0 || n > 1_000_000 {
+		return 0
 	}
 	return n
 }

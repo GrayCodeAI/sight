@@ -3,7 +3,9 @@ package context
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -83,6 +85,10 @@ func ChangedFiles(base string) ([]string, error) {
 
 // Blame runs git blame on a specific line range and returns a summary.
 func Blame(file string, startLine, endLine int) (string, error) {
+	if err := validateFilePath(file); err != nil {
+		return "", fmt.Errorf("git blame: invalid path: %w", err)
+	}
+
 	args := []string{"blame", "--line-porcelain",
 		"-L", strconv.Itoa(startLine) + "," + strconv.Itoa(endLine),
 		"--", file}
@@ -95,7 +101,33 @@ func Blame(file string, startLine, endLine int) (string, error) {
 	return parseBlameAuthors(string(out)), nil
 }
 
+// validateFilePath ensures a file path does not traverse outside the working directory.
+func validateFilePath(file string) error {
+	if file == "" {
+		return fmt.Errorf("empty path")
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("cannot determine working directory: %w", err)
+	}
+	absPath := file
+	if !filepath.IsAbs(file) {
+		absPath = filepath.Join(wd, file)
+	}
+	rel, err := filepath.Rel(wd, absPath)
+	if err != nil {
+		return fmt.Errorf("cannot resolve relative path: %w", err)
+	}
+	if strings.HasPrefix(rel, "..") {
+		return fmt.Errorf("path %q traverses outside working directory", file)
+	}
+	return nil
+}
+
 func recentCommits(file string, n int) ([]string, error) {
+	if err := validateFilePath(file); err != nil {
+		return nil, fmt.Errorf("recentCommits: invalid path: %w", err)
+	}
 	out, err := exec.Command("git", "log", "--oneline", "-n", strconv.Itoa(n), "--", file).Output()
 	if err != nil {
 		return nil, err
