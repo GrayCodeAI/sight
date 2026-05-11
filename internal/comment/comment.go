@@ -147,38 +147,6 @@ func buildDiffLineSet(file diff.File) diffLineSet {
 	return s
 }
 
-func isInDiff(file diff.File, line int) bool {
-	for _, hunk := range file.Hunks {
-		start := hunk.NewStart
-		end := hunk.NewStart + hunk.NewCount
-		if line >= start && line <= end {
-			return true
-		}
-	}
-	return false
-}
-
-// isInDiffContext returns true if the line falls within the broader context
-// of any hunk, including context lines surrounding the changes.
-func isInDiffContext(file diff.File, line int) bool {
-	for _, hunk := range file.Hunks {
-		// The context window includes all lines in the hunk (context,
-		// added, and removed). We check both old and new ranges.
-		newStart := hunk.NewStart
-		newEnd := hunk.NewStart + hunk.NewCount
-		if line >= newStart && line <= newEnd {
-			return true
-		}
-		// Also check against individual line numbers for precision
-		for _, l := range hunk.Lines {
-			if l.NewNum == line || l.OldNum == line {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func buildComment(f FindingInput) Inline {
 	var body strings.Builder
 
