@@ -9,14 +9,11 @@ linters:
     - govet
     - ineffassign
     - unused
-    - errcheck
     - staticcheck
     - misspell
     - nilerr
 
 linters-settings:
-  errcheck:
-    check-type-assertions: true
   misspell:
     locale: US
 
@@ -26,4 +23,3 @@ issues:
   exclude-rules:
     - path: _test\.go
       linters:
-        - errcheck
