@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: "1.26.1"
           cache: true
 
       - name: Build
@@ -26,3 +26,19 @@ jobs:
 
       - name: Test
         run: go test ./... -race -count=1 -timeout=60s
+
+      - name: Coverage
+        run: |
+          go test -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out | tail -1
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.1'
+      - uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.1.0
