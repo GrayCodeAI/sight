@@ -23,17 +23,17 @@ type SARIFTool struct {
 }
 
 type SARIFDriver struct {
-	Name            string      `json:"name"`
-	Version         string      `json:"version"`
-	InformationURI  string      `json:"informationUri"`
-	Rules           []SARIFRule `json:"rules,omitempty"`
+	Name           string      `json:"name"`
+	Version        string      `json:"version"`
+	InformationURI string      `json:"informationUri"`
+	Rules          []SARIFRule `json:"rules,omitempty"`
 }
 
 type SARIFRule struct {
-	ID               string              `json:"id"`
-	Name             string              `json:"name"`
-	ShortDescription SARIFMultiformat    `json:"shortDescription"`
-	DefaultConfig    *SARIFRuleConfig    `json:"defaultConfiguration,omitempty"`
+	ID               string           `json:"id"`
+	Name             string           `json:"name"`
+	ShortDescription SARIFMultiformat `json:"shortDescription"`
+	DefaultConfig    *SARIFRuleConfig `json:"defaultConfiguration,omitempty"`
 }
 
 type SARIFRuleConfig struct {
@@ -79,7 +79,7 @@ type SARIFRegion struct {
 }
 
 type SARIFFix struct {
-	Description SARIFMultiformat     `json:"description"`
+	Description SARIFMultiformat      `json:"description"`
 	Changes     []SARIFArtifactChange `json:"artifactChanges"`
 }
 
@@ -89,7 +89,7 @@ type SARIFArtifactChange struct {
 }
 
 type SARIFReplacement struct {
-	DeletedRegion  SARIFRegion          `json:"deletedRegion"`
+	DeletedRegion   SARIFRegion           `json:"deletedRegion"`
 	InsertedContent *SARIFInsertedContent `json:"insertedContent,omitempty"`
 }
 
@@ -151,7 +151,7 @@ func FormatSARIF(findings []Finding) (string, error) {
 				Tool: SARIFTool{
 					Driver: SARIFDriver{
 						Name:           "sight",
-						Version:        "1.0.0",
+						Version:        "0.2.0",
 						InformationURI: "https://github.com/GrayCodeAI/sight",
 						Rules:          rules,
 					},

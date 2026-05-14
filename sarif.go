@@ -29,22 +29,22 @@ type sarifTool struct {
 
 // sarifDriver describes the tool driver (primary component).
 type sarifDriver struct {
-	Name            string                `json:"name"`
-	Version         string                `json:"version"`
-	InformationURI  string                `json:"informationUri"`
-	Rules           []sarifReportingDesc  `json:"rules,omitempty"`
-	SemanticVersion string                `json:"semanticVersion"`
+	Name            string               `json:"name"`
+	Version         string               `json:"version"`
+	InformationURI  string               `json:"informationUri"`
+	Rules           []sarifReportingDesc `json:"rules,omitempty"`
+	SemanticVersion string               `json:"semanticVersion"`
 }
 
 // sarifReportingDesc describes a rule in the tool.
 type sarifReportingDesc struct {
-	ID               string              `json:"id"`
-	Name             string              `json:"name,omitempty"`
-	ShortDescription sarifMultiformat    `json:"shortDescription"`
-	FullDescription  sarifMultiformat    `json:"fullDescription,omitempty"`
-	HelpURI          string              `json:"helpUri,omitempty"`
-	Help             *sarifMultiformat   `json:"help,omitempty"`
-	Properties       *sarifRuleProps     `json:"properties,omitempty"`
+	ID               string            `json:"id"`
+	Name             string            `json:"name,omitempty"`
+	ShortDescription sarifMultiformat  `json:"shortDescription"`
+	FullDescription  sarifMultiformat  `json:"fullDescription,omitempty"`
+	HelpURI          string            `json:"helpUri,omitempty"`
+	Help             *sarifMultiformat `json:"help,omitempty"`
+	Properties       *sarifRuleProps   `json:"properties,omitempty"`
 }
 
 // sarifRuleProps holds additional rule metadata.
@@ -59,12 +59,12 @@ type sarifMultiformat struct {
 
 // sarifResult is a single finding in SARIF format.
 type sarifResult struct {
-	RuleID    string            `json:"ruleId"`
-	RuleIndex int               `json:"ruleIndex"`
-	Level     string            `json:"level"`
-	Message   sarifMultiformat  `json:"message"`
-	Locations []sarifLocation   `json:"locations,omitempty"`
-	Fixes     []sarifFix        `json:"fixes,omitempty"`
+	RuleID    string           `json:"ruleId"`
+	RuleIndex int              `json:"ruleIndex"`
+	Level     string           `json:"level"`
+	Message   sarifMultiformat `json:"message"`
+	Locations []sarifLocation  `json:"locations,omitempty"`
+	Fixes     []sarifFix       `json:"fixes,omitempty"`
 }
 
 // sarifLocation describes where a result was found.
@@ -182,8 +182,8 @@ func ToSARIF(findings []Finding) string {
 				Tool: sarifTool{
 					Driver: sarifDriver{
 						Name:            "sight",
-						Version:         "1.0.0",
-						SemanticVersion: "1.0.0",
+						Version:         "0.2.0",
+						SemanticVersion: "0.2.0",
 						InformationURI:  "https://github.com/GrayCodeAI/sight",
 						Rules:           rules,
 					},
