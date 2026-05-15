@@ -1,200 +1,95 @@
+// SARIF 2.1.0 output for sight, emitted via the shared
+// github.com/GrayCodeAI/hawk/sarif package.
+
 package output
 
 import (
-	"encoding/json"
-	"fmt"
+	"strings"
+
+	"github.com/GrayCodeAI/hawk/sarif"
 )
 
-// SARIF types per SARIF 2.1.0 specification.
+// ToolVersion is the sight tool version reported in SARIF output. It is set
+// at startup by the parent sight package from the canonical VERSION file.
+// Default falls back to "dev" so direct internal use (e.g. tests) still works.
+var ToolVersion = "dev"
 
-type SARIFLog struct {
-	Schema  string     `json:"$schema"`
-	Version string     `json:"version"`
-	Runs    []SARIFRun `json:"runs"`
-}
-
-type SARIFRun struct {
-	Tool    SARIFTool     `json:"tool"`
-	Results []SARIFResult `json:"results"`
-}
-
-type SARIFTool struct {
-	Driver SARIFDriver `json:"driver"`
-}
-
-type SARIFDriver struct {
-	Name           string      `json:"name"`
-	Version        string      `json:"version"`
-	InformationURI string      `json:"informationUri"`
-	Rules          []SARIFRule `json:"rules,omitempty"`
-}
-
-type SARIFRule struct {
-	ID               string           `json:"id"`
-	Name             string           `json:"name"`
-	ShortDescription SARIFMultiformat `json:"shortDescription"`
-	DefaultConfig    *SARIFRuleConfig `json:"defaultConfiguration,omitempty"`
-}
-
-type SARIFRuleConfig struct {
-	Level string `json:"level"`
-}
-
-type SARIFMultiformat struct {
-	Text string `json:"text"`
-}
-
-type SARIFResult struct {
-	RuleID    string               `json:"ruleId"`
-	Level     string               `json:"level"`
-	Message   SARIFMultiformat     `json:"message"`
-	Locations []SARIFLocation      `json:"locations,omitempty"`
-	Fixes     []SARIFFix           `json:"fixes,omitempty"`
-	Taxa      []SARIFTaxaReference `json:"taxa,omitempty"`
-}
-
-// SARIFTaxaReference references an external taxonomy entry (e.g., CWE).
-type SARIFTaxaReference struct {
-	ID            string           `json:"id"`
-	ToolComponent SARIFMultiformat `json:"toolComponent"`
-}
-
-type SARIFLocation struct {
-	PhysicalLocation SARIFPhysicalLocation `json:"physicalLocation"`
-}
-
-type SARIFPhysicalLocation struct {
-	ArtifactLocation SARIFArtifactLocation `json:"artifactLocation"`
-	Region           *SARIFRegion          `json:"region,omitempty"`
-}
-
-type SARIFArtifactLocation struct {
-	URI string `json:"uri"`
-}
-
-type SARIFRegion struct {
-	StartLine   int `json:"startLine,omitempty"`
-	EndLine     int `json:"endLine,omitempty"`
-	StartColumn int `json:"startColumn,omitempty"`
-}
-
-type SARIFFix struct {
-	Description SARIFMultiformat      `json:"description"`
-	Changes     []SARIFArtifactChange `json:"artifactChanges"`
-}
-
-type SARIFArtifactChange struct {
-	ArtifactLocation SARIFArtifactLocation `json:"artifactLocation"`
-	Replacements     []SARIFReplacement    `json:"replacements"`
-}
-
-type SARIFReplacement struct {
-	DeletedRegion   SARIFRegion           `json:"deletedRegion"`
-	InsertedContent *SARIFInsertedContent `json:"insertedContent,omitempty"`
-}
-
-type SARIFInsertedContent struct {
-	Text string `json:"text"`
-}
+// SetToolVersion lets the parent sight package wire its canonical Version
+// into this internal package without creating an import cycle.
+func SetToolVersion(v string) { ToolVersion = v }
 
 // FormatSARIF produces SARIF 2.1.0 JSON from review findings.
+//
+// Output is delegated to the shared sarif.Builder so sight and inspect
+// produce structurally identical SARIF.
 func FormatSARIF(findings []Finding) (string, error) {
-	rules := buildSARIFRules(findings)
-	results := make([]SARIFResult, 0, len(findings))
+	b := sarif.New(sarif.Tool{
+		Name:           "sight",
+		Version:        ToolVersion,
+		InformationURI: "https://github.com/GrayCodeAI/sight",
+	})
 
 	for _, f := range findings {
-		result := SARIFResult{
-			RuleID:  fmt.Sprintf("sight/%s", f.Concern),
-			Level:   sarifLevel(f.Severity),
-			Message: SARIFMultiformat{Text: f.Message},
-		}
+		ruleID := "sight/" + f.Concern
 
+		// Register the rule (deduped by ID inside the builder).
+		rule := sarif.Rule{
+			ID:               ruleID,
+			Name:             f.Concern,
+			ShortDescription: f.Concern + " analysis",
+			Severity:         severityToSARIF(f.Severity),
+		}
+		if f.CWE != "" {
+			rule.Tags = []string{"security", f.CWE}
+			rule.HelpURI = "https://cwe.mitre.org/data/definitions/" +
+				strings.TrimPrefix(f.CWE, "CWE-") + ".html"
+		}
+		b.AddRule(rule)
+
+		// Add the result.
+		result := sarif.Result{
+			RuleID:   ruleID,
+			Severity: severityToSARIF(f.Severity),
+			Message:  f.Message,
+		}
 		if f.File != "" {
-			loc := SARIFLocation{
-				PhysicalLocation: SARIFPhysicalLocation{
-					ArtifactLocation: SARIFArtifactLocation{URI: f.File},
-				},
-			}
+			result.URI = f.File
 			if f.Line > 0 {
-				loc.PhysicalLocation.Region = &SARIFRegion{
+				result.Region = &sarif.Region{
 					StartLine: f.Line,
 					EndLine:   f.EndLine,
 				}
-				if loc.PhysicalLocation.Region.EndLine == 0 {
-					loc.PhysicalLocation.Region.EndLine = f.Line
-				}
 			}
-			result.Locations = append(result.Locations, loc)
 		}
-
 		if f.Fix != "" {
-			result.Fixes = append(result.Fixes, SARIFFix{
-				Description: SARIFMultiformat{Text: f.Fix},
-			})
+			result.Fix = f.Fix
 		}
-
 		if f.CWE != "" {
-			result.Taxa = append(result.Taxa, SARIFTaxaReference{
-				ID:            f.CWE,
-				ToolComponent: SARIFMultiformat{Text: "CWE"},
-			})
+			result.Taxa = []sarif.TaxaRef{
+				{ID: f.CWE, Component: "CWE"},
+			}
 		}
-
-		results = append(results, result)
+		b.AddResult(result)
 	}
 
-	log := SARIFLog{
-		Schema:  "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
-		Version: "2.1.0",
-		Runs: []SARIFRun{
-			{
-				Tool: SARIFTool{
-					Driver: SARIFDriver{
-						Name:           "sight",
-						Version:        "0.2.0",
-						InformationURI: "https://github.com/GrayCodeAI/sight",
-						Rules:          rules,
-					},
-				},
-				Results: results,
-			},
-		},
-	}
-
-	out, err := json.MarshalIndent(log, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	return string(out), nil
+	return b.String(), nil
 }
 
-func buildSARIFRules(findings []Finding) []SARIFRule {
-	seen := make(map[string]bool)
-	var rules []SARIFRule
-
-	for _, f := range findings {
-		id := fmt.Sprintf("sight/%s", f.Concern)
-		if seen[id] {
-			continue
-		}
-		seen[id] = true
-		rules = append(rules, SARIFRule{
-			ID:               id,
-			Name:             f.Concern,
-			ShortDescription: SARIFMultiformat{Text: f.Concern + " analysis"},
-			DefaultConfig:    &SARIFRuleConfig{Level: sarifLevel(f.Severity)},
-		})
-	}
-	return rules
-}
-
-func sarifLevel(severity int) string {
+// severityToSARIF maps the int severity used internally by sight to the
+// sarif.Severity enum.
+//
+// sight Finding.Severity convention (int):
+//
+//	>= 3 (high, critical) → SARIF "error"
+//	   2 (medium)         → SARIF "warning"
+//	other (0, 1, info)    → SARIF "note"
+func severityToSARIF(severity int) sarif.Severity {
 	switch {
-	case severity >= 3: // high, critical
-		return "error"
-	case severity == 2: // medium
-		return "warning"
-	default: // low, info
-		return "note"
+	case severity >= 3:
+		return sarif.SeverityError
+	case severity == 2:
+		return sarif.SeverityWarning
+	default:
+		return sarif.SeverityNote
 	}
 }
