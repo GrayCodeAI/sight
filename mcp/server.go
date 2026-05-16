@@ -26,7 +26,7 @@ func New(provider sight.Provider, opts ...sight.Option) *Server {
 		provider: provider,
 		opts:     opts,
 	}
-	s.server = mcpserver.NewMCPServer("sight", "0.1.0",
+	s.server = mcpserver.NewMCPServer("sight", "0.2.0",
 		mcpserver.WithToolCapabilities(true),
 	)
 	s.registerTools()
