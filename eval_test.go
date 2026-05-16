@@ -454,7 +454,7 @@ func TestLoadEvalSuite(t *testing.T) {
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "suite.json")
-	if err := os.WriteFile(path, []byte(suiteJSON), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(suiteJSON), 0o644); err != nil {
 		t.Fatalf("failed to write temp file: %v", err)
 	}
 

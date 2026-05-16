@@ -162,7 +162,7 @@ func TestBuildPromptEnhanced_Basic(t *testing.T) {
 				{
 					OldStart: 10, OldCount: 3,
 					NewStart: 10, NewCount: 5,
-					Header:   "func handleRequest",
+					Header: "func handleRequest",
 					Lines: []diff.Line{
 						{Type: diff.LineContext, Content: "existing code", OldNum: 10, NewNum: 10},
 						{Type: diff.LineAdded, Content: "new code", NewNum: 11},

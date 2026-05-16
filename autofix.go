@@ -15,8 +15,8 @@ type AutoFix struct {
 // FixSuggestion is a proposed code change to resolve a finding.
 type FixSuggestion struct {
 	Finding     *Finding
-	FixedCode   string // the corrected code
-	Explanation string // why this fix works
+	FixedCode   string  // the corrected code
+	Explanation string  // why this fix works
 	Confidence  float64 // 0-1 how confident the fix is correct
 }
 

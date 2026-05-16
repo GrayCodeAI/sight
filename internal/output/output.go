@@ -32,12 +32,16 @@ type Stats struct {
 	DurationPerConcern map[string]time.Duration
 }
 
-var severityNames = [...]string{"INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"}
-var severityColors = [...]string{"\033[36m", "\033[34m", "\033[33m", "\033[31m", "\033[35;1m"}
+var (
+	severityNames  = [...]string{"INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"}
+	severityColors = [...]string{"\033[36m", "\033[34m", "\033[33m", "\033[31m", "\033[35;1m"}
+)
 
-const reset = "\033[0m"
-const bold = "\033[1m"
-const dim = "\033[2m"
+const (
+	reset = "\033[0m"
+	bold  = "\033[1m"
+	dim   = "\033[2m"
+)
 
 // FormatTerminal renders a human-readable review report with ANSI colors.
 func FormatTerminal(findings []Finding, stats Stats) string {
