@@ -31,8 +31,8 @@ type FilterResult struct {
 }
 
 func FilterFindings(ctx context.Context, provider Provider, findings []Finding,
-	fileContents map[string]string, config FilterConfig) ([]Finding, []FilterResult, error) {
-
+	fileContents map[string]string, config FilterConfig,
+) ([]Finding, []FilterResult, error) {
 	if provider == nil {
 		return findings, nil, ErrNoProvider
 	}

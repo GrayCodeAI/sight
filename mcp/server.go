@@ -26,7 +26,8 @@ func New(provider sight.Provider, opts ...sight.Option) *Server {
 		provider: provider,
 		opts:     opts,
 	}
-	s.server = mcpserver.NewMCPServer("sight", "0.2.0",
+	s.server = mcpserver.NewMCPServer(
+		"sight", "0.2.0",
 		mcpserver.WithToolCapabilities(true),
 	)
 	s.registerTools()
@@ -40,17 +41,20 @@ func (s *Server) ServeStdio() error {
 }
 
 func (s *Server) registerTools() {
-	s.server.AddTool(mcplib.NewTool("sight_review",
+	s.server.AddTool(mcplib.NewTool(
+		"sight_review",
 		mcplib.WithDescription("Run AI code review on a unified diff"),
 		mcplib.WithString("diff", mcplib.Required(), mcplib.Description("Unified diff text to review")),
 	), s.handleReview)
 
-	s.server.AddTool(mcplib.NewTool("sight_describe",
+	s.server.AddTool(mcplib.NewTool(
+		"sight_describe",
 		mcplib.WithDescription("Generate a PR description from a unified diff"),
 		mcplib.WithString("diff", mcplib.Required(), mcplib.Description("Unified diff text")),
 	), s.handleDescribe)
 
-	s.server.AddTool(mcplib.NewTool("sight_improve",
+	s.server.AddTool(mcplib.NewTool(
+		"sight_improve",
 		mcplib.WithDescription("Suggest code improvements (non-bug focused)"),
 		mcplib.WithString("diff", mcplib.Required(), mcplib.Description("Unified diff text")),
 	), s.handleImprove)

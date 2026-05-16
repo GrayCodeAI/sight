@@ -115,7 +115,6 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 				Temperature: 0.1,
 				System:      systemPrompt,
 			})
-
 			if err != nil {
 				concernErrors = append(concernErrors, fmt.Sprintf("[%s] %v", concern.Name, err))
 				continue

@@ -12,7 +12,7 @@ import (
 // IncrementalState tracks the last-reviewed commit SHA for incremental reviews.
 // It is safe for concurrent use.
 type IncrementalState struct {
-	mu             sync.Mutex
+	mu              sync.Mutex
 	lastReviewedSHA string
 }
 

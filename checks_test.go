@@ -26,7 +26,7 @@ enabled: true
 Do not use console.log or fmt.Println for debugging.
 Remove all debug logging before merge.
 `
-	if err := os.WriteFile(filepath.Join(dir, "no-debug-logging.md"), []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "no-debug-logging.md"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -62,7 +62,7 @@ Remove all debug logging before merge.
 func TestLoadChecks_NoFrontmatter(t *testing.T) {
 	dir := t.TempDir()
 	content := "Check that all errors are wrapped with context before returning."
-	if err := os.WriteFile(filepath.Join(dir, "wrap-errors.md"), []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "wrap-errors.md"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -96,7 +96,7 @@ enabled: false
 ---
 This check is disabled.
 `
-	if err := os.WriteFile(filepath.Join(dir, "disabled-check.md"), []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "disabled-check.md"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -114,9 +114,9 @@ This check is disabled.
 
 func TestLoadChecks_SkipsNonMarkdown(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "check.md"), []byte("valid check"), 0644)
-	os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("not a check"), 0644)
-	os.WriteFile(filepath.Join(dir, "data.json"), []byte("{}"), 0644)
+	os.WriteFile(filepath.Join(dir, "check.md"), []byte("valid check"), 0o644)
+	os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("not a check"), 0o644)
+	os.WriteFile(filepath.Join(dir, "data.json"), []byte("{}"), 0o644)
 
 	checks, err := LoadChecks(dir)
 	if err != nil {
@@ -145,10 +145,10 @@ func TestCustomChecksToConcerns_FiltersDisabled(t *testing.T) {
 func TestLoadChecksFromRepo(t *testing.T) {
 	dir := t.TempDir()
 	checksDir := filepath.Join(dir, ".sight", "checks")
-	if err := os.MkdirAll(checksDir, 0755); err != nil {
+	if err := os.MkdirAll(checksDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	os.WriteFile(filepath.Join(checksDir, "test.md"), []byte("test check"), 0644)
+	os.WriteFile(filepath.Join(checksDir, "test.md"), []byte("test check"), 0o644)
 
 	checks, err := LoadChecksFromRepo(dir)
 	if err != nil {

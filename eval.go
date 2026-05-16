@@ -147,7 +147,8 @@ func matchesSingleExpectation(exp EvalExpectation, f Finding) bool {
 		}
 	}
 	if exp.MessageContains != "" && !strings.Contains(
-		strings.ToLower(f.Message), strings.ToLower(exp.MessageContains)) {
+		strings.ToLower(f.Message), strings.ToLower(exp.MessageContains),
+	) {
 		return false
 	}
 	if exp.File != "" && !strings.EqualFold(f.File, exp.File) {
@@ -171,7 +172,8 @@ func matchesSingleDenial(deny EvalDenial, f Finding) bool {
 		return false
 	}
 	if deny.MessageContains != "" && !strings.Contains(
-		strings.ToLower(f.Message), strings.ToLower(deny.MessageContains)) {
+		strings.ToLower(f.Message), strings.ToLower(deny.MessageContains),
+	) {
 		return false
 	}
 	return true
