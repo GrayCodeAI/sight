@@ -18,7 +18,7 @@ func TestLoadProjectRules_EmptyDir(t *testing.T) {
 func TestLoadProjectRules_CLAUDEmd(t *testing.T) {
 	dir := t.TempDir()
 	content := "Always use error wrapping with fmt.Errorf."
-	if err := os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -37,7 +37,7 @@ func TestLoadProjectRules_CLAUDEmd(t *testing.T) {
 func TestLoadProjectRules_CONTRIBUTINGmd(t *testing.T) {
 	dir := t.TempDir()
 	content := "Please follow the coding guidelines."
-	if err := os.WriteFile(filepath.Join(dir, "CONTRIBUTING.md"), []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "CONTRIBUTING.md"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -53,11 +53,11 @@ func TestLoadProjectRules_CONTRIBUTINGmd(t *testing.T) {
 func TestLoadProjectRules_SightRules(t *testing.T) {
 	dir := t.TempDir()
 	rulesDir := filepath.Join(dir, ".sight", "rules")
-	if err := os.MkdirAll(rulesDir, 0755); err != nil {
+	if err := os.MkdirAll(rulesDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	content := "No global variables allowed."
-	if err := os.WriteFile(filepath.Join(rulesDir, "no-globals.md"), []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(rulesDir, "no-globals.md"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -73,11 +73,11 @@ func TestLoadProjectRules_SightRules(t *testing.T) {
 func TestLoadProjectRules_CursorRules(t *testing.T) {
 	dir := t.TempDir()
 	rulesDir := filepath.Join(dir, ".cursor", "rules")
-	if err := os.MkdirAll(rulesDir, 0755); err != nil {
+	if err := os.MkdirAll(rulesDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	content := "Use tabs for indentation."
-	if err := os.WriteFile(filepath.Join(rulesDir, "style.md"), []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(rulesDir, "style.md"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -93,12 +93,12 @@ func TestLoadProjectRules_CursorRules(t *testing.T) {
 func TestLoadProjectRules_MultipleSources(t *testing.T) {
 	dir := t.TempDir()
 
-	os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("Claude rule"), 0644)
-	os.WriteFile(filepath.Join(dir, "CONTRIBUTING.md"), []byte("Contributing rule"), 0644)
+	os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("Claude rule"), 0o644)
+	os.WriteFile(filepath.Join(dir, "CONTRIBUTING.md"), []byte("Contributing rule"), 0o644)
 
 	sightRulesDir := filepath.Join(dir, ".sight", "rules")
-	os.MkdirAll(sightRulesDir, 0755)
-	os.WriteFile(filepath.Join(sightRulesDir, "custom.md"), []byte("Custom rule"), 0644)
+	os.MkdirAll(sightRulesDir, 0o755)
+	os.WriteFile(filepath.Join(sightRulesDir, "custom.md"), []byte("Custom rule"), 0o644)
 
 	result := LoadProjectRules(dir)
 	if !strings.Contains(result, "Claude Rules") {
@@ -115,7 +115,7 @@ func TestLoadProjectRules_MultipleSources(t *testing.T) {
 func TestLoadProjectRules_EmptyFileSkipped(t *testing.T) {
 	dir := t.TempDir()
 	// Empty file (just whitespace)
-	os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("   \n  \n"), 0644)
+	os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("   \n  \n"), 0o644)
 
 	result := LoadProjectRules(dir)
 	if result != "" {
@@ -133,9 +133,9 @@ func TestGlobFiles_NoMatch(t *testing.T) {
 
 func TestGlobFiles_WithMatches(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "a.md"), []byte("a"), 0644)
-	os.WriteFile(filepath.Join(dir, "b.md"), []byte("b"), 0644)
-	os.WriteFile(filepath.Join(dir, "c.txt"), []byte("c"), 0644)
+	os.WriteFile(filepath.Join(dir, "a.md"), []byte("a"), 0o644)
+	os.WriteFile(filepath.Join(dir, "b.md"), []byte("b"), 0o644)
+	os.WriteFile(filepath.Join(dir, "c.txt"), []byte("c"), 0o644)
 
 	result := globFiles(filepath.Join(dir, "*.md"))
 	if len(result) != 2 {
@@ -146,7 +146,7 @@ func TestGlobFiles_WithMatches(t *testing.T) {
 func TestFileIfExists_Exists(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.md")
-	os.WriteFile(path, []byte("content"), 0644)
+	os.WriteFile(path, []byte("content"), 0o644)
 
 	result := fileIfExists(path)
 	if len(result) != 1 || result[0] != path {
