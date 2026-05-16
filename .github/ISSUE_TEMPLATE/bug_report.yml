@@ -1,0 +1,114 @@
+name: Bug report
+description: Something is broken or behaving unexpectedly.
+title: "bug: <one-line summary>"
+labels: ["bug", "triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill in as much
+        of the form as you can — the more we know, the faster we can fix it.
+
+        Before submitting:
+        - Search [existing issues](https://github.com/GrayCodeAI/sight/issues) to avoid duplicates.
+        - If this is a security issue, please **do not** file a public issue. See `SECURITY.md`.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear, concise description of the bug.
+      placeholder: When I call sight.Review(...) on diff X, I expected Y but got Z.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      description: How are you using sight?
+      options:
+        - "Library API (`sight.Review`, `sight.Describe`, `sight.Improve`)"
+        - "MCP (`sight_review`, `sight_describe`, `sight_improve` tools)"
+        - "SARIF output"
+        - "Static rules / convention checks"
+        - "Eval framework"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal Go snippet, MCP call, or diff that reliably reproduces the problem.
+      render: go
+      placeholder: |
+        diff := `--- a/foo.go
+        +++ b/foo.go
+        @@ ... @@`
+        result, err := sight.Review(ctx, diff, sight.WithProvider(p), sight.Thorough)
+        // ^ wrong finding category / missed finding / panic / etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: false-positive
+    attributes:
+      label: If this is a false positive / false negative
+      description: |
+        Paste the relevant finding (or the missing one), and explain why you
+        think the verdict is wrong. Include the snippet of code that
+        triggered (or should have triggered) it.
+
+  - type: input
+    id: sight-version
+    attributes:
+      label: sight version
+      description: Output of `sight version` (or the git SHA you built from).
+      placeholder: "0.2.0"
+    validations:
+      required: true
+
+  - type: input
+    id: go-version
+    attributes:
+      label: Go version
+      description: Output of `go version`.
+      placeholder: "go version go1.26.1 darwin/arm64"
+    validations:
+      required: true
+
+  - type: input
+    id: provider
+    attributes:
+      label: LLM provider used
+      description: Which provider/model? (Anthropic Claude Opus, OpenAI GPT-5, local Ollama, mock, etc.)
+      placeholder: "anthropic claude-opus-4-20250514"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / output
+      description: |
+        Paste relevant output. **Redact any secrets, API keys, proprietary
+        code, and identifying repo paths first.**
+      render: shell
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I redacted any secrets, API keys, or private code from logs.
+          required: true

@@ -1,0 +1,23 @@
+# CODEOWNERS for sight (AI code review library)
+* @GrayCodeAI/maintainers
+
+# Review pipeline
+/reviewer.go      @GrayCodeAI/review-team
+/sight.go         @GrayCodeAI/review-team
+/static_rules.go  @GrayCodeAI/review-team
+/internal/review/ @GrayCodeAI/review-team
+
+# Output formats (SARIF, etc.)
+/internal/output/ @GrayCodeAI/review-team
+/sarif.go         @GrayCodeAI/review-team
+
+# Versioning
+/VERSION          @GrayCodeAI/maintainers
+/version.go       @GrayCodeAI/maintainers
+
+# CI / release
+/.github/         @GrayCodeAI/devops-team
+/Makefile         @GrayCodeAI/devops-team
+
+# Documentation
+*.md              @GrayCodeAI/docs-team
