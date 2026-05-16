@@ -89,9 +89,11 @@ func Blame(file string, startLine, endLine int) (string, error) {
 		return "", fmt.Errorf("git blame: invalid path: %w", err)
 	}
 
-	args := []string{"blame", "--line-porcelain",
+	args := []string{
+		"blame", "--line-porcelain",
 		"-L", strconv.Itoa(startLine) + "," + strconv.Itoa(endLine),
-		"--", file}
+		"--", file,
+	}
 
 	out, err := exec.Command("git", args...).Output()
 	if err != nil {

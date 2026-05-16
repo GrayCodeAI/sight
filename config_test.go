@@ -203,7 +203,7 @@ func TestApplyFileConfig_Empty(t *testing.T) {
 func TestFindConfigFile_Found(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, ".sight.toml")
-	if err := os.WriteFile(configPath, []byte("model = \"gpt-4\""), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte("model = \"gpt-4\""), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -216,11 +216,11 @@ func TestFindConfigFile_Found(t *testing.T) {
 func TestFindConfigFile_ParentDir(t *testing.T) {
 	parent := t.TempDir()
 	child := filepath.Join(parent, "sub", "dir")
-	if err := os.MkdirAll(child, 0755); err != nil {
+	if err := os.MkdirAll(child, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	configPath := filepath.Join(parent, ".sight.toml")
-	if err := os.WriteFile(configPath, []byte("model = \"gpt-4\""), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte("model = \"gpt-4\""), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -233,7 +233,7 @@ func TestFindConfigFile_ParentDir(t *testing.T) {
 func TestFindConfigFile_AlternateNames(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "sight.toml")
-	if err := os.WriteFile(configPath, []byte("model = \"gpt-4\""), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte("model = \"gpt-4\""), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -246,7 +246,7 @@ func TestFindConfigFile_AlternateNames(t *testing.T) {
 func TestFindConfigFile_JSONFormat(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, ".sight.json")
-	if err := os.WriteFile(configPath, []byte(`{"model": "gpt-4"}`), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(`{"model": "gpt-4"}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -266,8 +266,8 @@ func TestFindConfigFile_NotFound(t *testing.T) {
 
 func TestFindConfigFile_PrioritizesToml(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, ".sight.toml"), []byte("model = \"a\""), 0644)
-	os.WriteFile(filepath.Join(dir, ".sight.json"), []byte(`{"model": "b"}`), 0644)
+	os.WriteFile(filepath.Join(dir, ".sight.toml"), []byte("model = \"a\""), 0o644)
+	os.WriteFile(filepath.Join(dir, ".sight.json"), []byte(`{"model": "b"}`), 0o644)
 
 	found := findConfigFile(dir)
 	expected := filepath.Join(dir, ".sight.toml")
@@ -294,7 +294,7 @@ model = "gpt-4"
 fail_on = "high"
 max_tokens = 4096
 `
-	if err := os.WriteFile(filepath.Join(dir, ".sight.toml"), []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".sight.toml"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

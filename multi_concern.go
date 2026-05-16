@@ -100,9 +100,11 @@ func RouteConcerns(diff string, allConcerns []ConcernSpec) []ConcernSpec {
 }
 
 func containsSecuritySignals(diff string) bool {
-	signals := []string{"auth", "password", "token", "secret", "crypto", "hash",
+	signals := []string{
+		"auth", "password", "token", "secret", "crypto", "hash",
 		"session", "cookie", "cors", "csrf", "sql", "exec", "eval", "inject",
-		"sanitize", "escape", "permission", "role", "admin"}
+		"sanitize", "escape", "permission", "role", "admin",
+	}
 	for _, s := range signals {
 		if strings.Contains(diff, s) {
 			return true
@@ -132,8 +134,10 @@ func containsTestCode(diff string) bool {
 }
 
 func containsPerformanceSignals(diff string) bool {
-	signals := []string{"loop", "for ", "while", "range", "append", "map[",
-		"query", "select ", "join", "cache", "pool", "buffer", "batch"}
+	signals := []string{
+		"loop", "for ", "while", "range", "append", "map[",
+		"query", "select ", "join", "cache", "pool", "buffer", "batch",
+	}
 	for _, s := range signals {
 		if strings.Contains(diff, s) {
 			return true

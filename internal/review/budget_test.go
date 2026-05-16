@@ -222,14 +222,14 @@ func TestLooksLikeCodeWord(t *testing.T) {
 		word     string
 		expected bool
 	}{
-		{"handleRequest", true},  // camelCase
-		{"user_name", true},      // snake_case
-		{"v2", true},             // alphanumeric
-		{"x86", true},            // alphanumeric
-		{"hello", false},         // plain word
-		{"THE", false},           // all caps, no underscores
-		{"MAX_VALUE", true},      // SCREAMING_SNAKE_CASE
-		{"PascalCase", true},     // PascalCase with mixed case
+		{"handleRequest", true}, // camelCase
+		{"user_name", true},     // snake_case
+		{"v2", true},            // alphanumeric
+		{"x86", true},           // alphanumeric
+		{"hello", false},        // plain word
+		{"THE", false},          // all caps, no underscores
+		{"MAX_VALUE", true},     // SCREAMING_SNAKE_CASE
+		{"PascalCase", true},    // PascalCase with mixed case
 	}
 
 	for _, tc := range tests {

@@ -27,9 +27,9 @@ type testSarifLog struct {
 			}
 		}
 		Results []struct {
-			RuleID  string `json:"ruleId"`
-			Level   string
-			Message struct{ Text string }
+			RuleID    string `json:"ruleId"`
+			Level     string
+			Message   struct{ Text string }
 			Locations []struct {
 				PhysicalLocation struct {
 					ArtifactLocation struct{ URI string } `json:"artifactLocation"`
@@ -221,8 +221,10 @@ func TestFormatSARIF_NoFile(t *testing.T) {
 
 func TestFormatSARIF_NoLineNumber(t *testing.T) {
 	findings := []Finding{
-		{Concern: "security", Severity: 2, File: "handler.go", Line: 0,
-			Message: "File-level concern"},
+		{
+			Concern: "security", Severity: 2, File: "handler.go", Line: 0,
+			Message: "File-level concern",
+		},
 	}
 
 	out, err := FormatSARIF(findings)
@@ -242,8 +244,10 @@ func TestFormatSARIF_NoLineNumber(t *testing.T) {
 
 func TestFormatSARIF_EndLineFallback(t *testing.T) {
 	findings := []Finding{
-		{Concern: "bugs", Severity: 2, File: "main.go", Line: 42, EndLine: 0,
-			Message: "Issue"},
+		{
+			Concern: "bugs", Severity: 2, File: "main.go", Line: 42, EndLine: 0,
+			Message: "Issue",
+		},
 	}
 
 	out, err := FormatSARIF(findings)
@@ -282,8 +286,10 @@ func TestFormatSARIF_RulesDedup(t *testing.T) {
 
 func TestFormatSARIF_ValidJSON(t *testing.T) {
 	findings := []Finding{
-		{Concern: "security", Severity: 4, File: "a.go", Line: 1,
-			Message: "test with \"quotes\" and special <chars>"},
+		{
+			Concern: "security", Severity: 4, File: "a.go", Line: 1,
+			Message: "test with \"quotes\" and special <chars>",
+		},
 	}
 
 	out, err := FormatSARIF(findings)

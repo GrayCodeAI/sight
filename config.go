@@ -9,15 +9,15 @@ import (
 
 // FileConfig represents the contents of a .sight.toml configuration file.
 type FileConfig struct {
-	Model       string            `json:"model"`
-	Concerns    []string          `json:"concerns"`
-	FailOn      string            `json:"fail_on"`
-	MaxTokens   int               `json:"max_tokens"`
-	Exclude     []string          `json:"exclude"`
-	GitContext  *bool             `json:"git_context"`
-	Reflection  *bool             `json:"reflection"`
-	Parallel    *bool             `json:"parallel"`
-	Prompts     map[string]string `json:"prompts"`
+	Model      string            `json:"model"`
+	Concerns   []string          `json:"concerns"`
+	FailOn     string            `json:"fail_on"`
+	MaxTokens  int               `json:"max_tokens"`
+	Exclude    []string          `json:"exclude"`
+	GitContext *bool             `json:"git_context"`
+	Reflection *bool             `json:"reflection"`
+	Parallel   *bool             `json:"parallel"`
+	Prompts    map[string]string `json:"prompts"`
 }
 
 // LoadConfigFile reads .sight.toml from the given directory (or parents).

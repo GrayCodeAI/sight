@@ -90,7 +90,8 @@ func mockFindings() string {
 func TestReview_Basic(t *testing.T) {
 	provider := &mockProvider{response: mockFindings()}
 
-	result, err := sight.Review(context.Background(), testDiff,
+	result, err := sight.Review(
+		context.Background(), testDiff,
 		sight.WithProvider(provider),
 		sight.WithConcerns("security"),
 		sight.WithParallel(false),
@@ -120,7 +121,8 @@ func TestReview_Basic(t *testing.T) {
 func TestReview_MultipleConcerns(t *testing.T) {
 	provider := &mockProvider{response: mockFindings()}
 
-	result, err := sight.Review(context.Background(), testDiff,
+	result, err := sight.Review(
+		context.Background(), testDiff,
 		sight.WithProvider(provider),
 		sight.WithConcerns("security", "bugs"),
 		sight.WithParallel(true),
@@ -147,7 +149,8 @@ func TestReview_NoProvider(t *testing.T) {
 
 func TestReview_EmptyDiff(t *testing.T) {
 	provider := &mockProvider{response: "[]"}
-	_, err := sight.Review(context.Background(), "",
+	_, err := sight.Review(
+		context.Background(), "",
 		sight.WithProvider(provider),
 	)
 	if err != sight.ErrEmptyDiff {
@@ -158,7 +161,8 @@ func TestReview_EmptyDiff(t *testing.T) {
 func TestReview_ProviderError(t *testing.T) {
 	provider := &mockProvider{err: fmt.Errorf("rate limited")}
 
-	result, err := sight.Review(context.Background(), testDiff,
+	result, err := sight.Review(
+		context.Background(), testDiff,
 		sight.WithProvider(provider),
 		sight.WithConcerns("security"),
 		sight.WithParallel(false),
@@ -208,7 +212,8 @@ func TestReview_Presets(t *testing.T) {
 
 	presets := []sight.Option{sight.Quick, sight.Thorough, sight.SecurityFocus, sight.CI}
 	for _, preset := range presets {
-		_, err := sight.Review(context.Background(), testDiff,
+		_, err := sight.Review(
+			context.Background(), testDiff,
 			sight.WithProvider(provider),
 			preset,
 		)
@@ -223,7 +228,8 @@ func TestReview_Deduplication(t *testing.T) {
 	response := `[{"file": "handler.go", "line": 13, "severity": "high", "message": "SQL injection", "fix": "use params"}]`
 	provider := &mockProvider{response: response}
 
-	result, err := sight.Review(context.Background(), testDiff,
+	result, err := sight.Review(
+		context.Background(), testDiff,
 		sight.WithProvider(provider),
 		sight.WithConcerns("security", "bugs"),
 		sight.WithParallel(false),
