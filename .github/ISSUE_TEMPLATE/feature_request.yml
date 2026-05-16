@@ -1,0 +1,71 @@
+name: Feature request
+description: Suggest an improvement, a new review concern, or a new integration.
+title: "feat: <one-line summary>"
+labels: ["enhancement", "triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a feature. sight is the AI code-review library that
+        backs hawk's review pipeline. Every feature is evaluated against whether
+        it serves **a single developer** running an AI agent locally — i.e. it
+        either improves review precision/recall, lowers latency, or simplifies
+        integration.
+
+        Before submitting:
+        - Search [existing issues](https://github.com/GrayCodeAI/sight/issues) to avoid duplicates.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of feature
+      description: What flavour of change is this?
+      options:
+        - "Review concerns / multi-concern pipeline"
+        - "Static rules / convention checks"
+        - "SARIF output"
+        - "MCP server / tools"
+        - "Configuration (.sight/, options)"
+        - "Eval framework"
+        - "Output format / inline comments / describe / improve"
+        - "Tooling / CI / docs"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the user problem first. Solutions can come later.
+      placeholder: When I review diff X, sight misses Y / surfaces too many Z.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would you like sight to behave? Library snippet, MCP tool shape, config sample.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: |
+        What did you try? What do other code-review tools (CodeRabbit, Sourcery,
+        DeepSource, Qodana, Semgrep, Sourcegraph code-review, danger-js) do?
+        Why isn't that enough?
+
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Solo-developer fit
+      description: sight avoids enterprise scope. Confirm this feature respects that.
+      options:
+        - label: Works with zero configuration (sensible defaults).
+        - label: Does not require a network call beyond the user's chosen LLM provider.
+        - label: Stores any state locally (under `.sight/` in the repo).
+        - label: Has an escape hatch (override via option, env, or config).
