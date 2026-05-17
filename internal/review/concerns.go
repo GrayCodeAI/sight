@@ -1,15 +1,17 @@
 // Package review implements the multi-concern LLM review pipeline.
 package review
 
+import "github.com/GrayCodeAI/hawk/shared/types"
+
 // Severity mirrors the public type for internal use.
-type Severity int
+type Severity = types.Severity
 
 const (
-	SeverityInfo Severity = iota
-	SeverityLow
-	SeverityMedium
-	SeverityHigh
-	SeverityCritical
+	SeverityInfo     Severity = types.SeverityInfo
+	SeverityLow      Severity = types.SeverityLow
+	SeverityMedium   Severity = types.SeverityMedium
+	SeverityHigh     Severity = types.SeverityHigh
+	SeverityCritical Severity = types.SeverityCritical
 )
 
 // Concern defines a review focus area with its specialized prompt.
