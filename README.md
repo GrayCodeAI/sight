@@ -69,7 +69,6 @@ Each finding includes:
 ## Output Formats
 
 - Inline comments (GitHub/GitLab PR comments)
-- SARIF (static analysis interchange)
 - Human-readable terminal output
 
 ## Configuration
