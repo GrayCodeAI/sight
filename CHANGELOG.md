@@ -34,7 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   with surface dropdown (library API / MCP / SARIF output / eval).
 - `.github/ISSUE_TEMPLATE/feature_request.yml` — feature request with
   a `kind` selector (review concerns / static rules / SARIF / MCP /
-  config / eval / output) and solo-dev fit checks.
+  config / eval / output) and developer fit checks.
 - `.github/ISSUE_TEMPLATE/config.yml` — routes security to advisories,
   questions to discussions, blocks blank issues.
 
