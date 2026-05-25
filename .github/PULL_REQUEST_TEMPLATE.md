@@ -75,4 +75,4 @@ $ make lint
 - [ ] SARIF output (if touched) validates against the 2.1.0 schema
 - [ ] No secrets, tokens, or PII in fixtures (eval inputs use synthetic
       diffs only)
-- [ ] No `Co-authored-by:` trailers (this is solo-developer work)
+- [ ] No `Co-authored-by:` trailers (this is individual-developer work)
