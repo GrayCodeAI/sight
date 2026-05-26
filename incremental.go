@@ -138,7 +138,6 @@ func enrichDiffWithContext(ctx context.Context, diffText string, contextLines in
 	scanner := bufio.NewScanner(strings.NewReader(diffText))
 
 	var currentFile string
-	var inHunk bool
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -147,7 +146,6 @@ func enrichDiffWithContext(ctx context.Context, diffText string, contextLines in
 		if strings.HasPrefix(line, "+++ b/") {
 			currentFile = strings.TrimPrefix(line, "+++ b/")
 			enriched.WriteString(line + "\n")
-			inHunk = false
 			continue
 		}
 
