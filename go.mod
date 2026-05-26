@@ -3,7 +3,7 @@ module github.com/GrayCodeAI/sight
 go 1.26.3
 
 require (
-	github.com/GrayCodeAI/hawk v0.2.0
+	github.com/GrayCodeAI/hawk v0.3.0
 	github.com/mark3labs/mcp-go v0.49.0
 )
 
