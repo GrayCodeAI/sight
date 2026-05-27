@@ -151,7 +151,7 @@ func enrichDiffWithContext(ctx context.Context, diffText string, contextLines in
 
 		// Detect hunk headers and add surrounding context
 		if matches := hunkHeaderRe.FindStringSubmatch(line); matches != nil && currentFile != "" {
-			inHunk = true
+			_ = true
 			startLine, _ := strconv.Atoi(matches[1])
 
 			// Add surrounding context before the hunk
