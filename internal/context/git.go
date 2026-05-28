@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // FileContext holds contextual information about a changed file.
@@ -19,15 +20,30 @@ type FileContext struct {
 
 // Enrich gathers git context for the given file paths.
 // Returns context for each file, best-effort (non-fatal on failures).
+// Uses a goroutine pool (max 10 concurrent git log calls) for parallelism.
 func Enrich(files []string) []FileContext {
-	var results []FileContext
-	for _, f := range files {
-		fc := FileContext{Path: f}
-		if commits, err := recentCommits(f, 5); err == nil {
-			fc.RecentCommits = commits
-		}
-		results = append(results, fc)
+	results := make([]FileContext, len(files))
+	if len(files) == 0 {
+		return results
 	}
+
+	sem := make(chan struct{}, 10)
+	var wg sync.WaitGroup
+
+	for i, f := range files {
+		results[i] = FileContext{Path: f}
+		wg.Add(1)
+		go func(idx int, path string) {
+			defer wg.Done()
+			sem <- struct{}{}        // acquire semaphore
+			defer func() { <-sem }() // release semaphore
+			if commits, err := recentCommits(path, 5); err == nil {
+				results[idx].RecentCommits = commits
+			}
+		}(i, f)
+	}
+
+	wg.Wait()
 	return results
 }
 

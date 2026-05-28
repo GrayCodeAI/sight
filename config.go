@@ -1,6 +1,7 @@
 package sight
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -26,6 +27,15 @@ func LoadConfigFile(dir string) (*FileConfig, error) {
 	path := findConfigFile(dir)
 	if path == "" {
 		return nil, nil
+	}
+
+	const maxConfigSize = 1 << 20 // 1MB
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if info.Size() > maxConfigSize {
+		return nil, fmt.Errorf("config file %s is too large (%d bytes, max %d bytes)", path, info.Size(), maxConfigSize)
 	}
 
 	data, err := os.ReadFile(path)
