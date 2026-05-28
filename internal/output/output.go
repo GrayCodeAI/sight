@@ -147,6 +147,161 @@ func FormatJSON(findings []Finding) (string, error) {
 	return string(out), nil
 }
 
+// SARIF 2.1.0 output types (package-level so they can reference each other).
+
+type outputSarifLog struct {
+	Version string              `json:"version"`
+	Schema  string              `json:"$schema"`
+	Runs    []outputSarifRun    `json:"runs"`
+}
+
+type outputSarifRun struct {
+	Tool    outputSarifTool     `json:"tool"`
+	Results []outputSarifResult `json:"results"`
+}
+
+type outputSarifTool struct {
+	Driver outputSarifDriver `json:"driver"`
+}
+
+type outputSarifDriver struct {
+	Name           string              `json:"name"`
+	Version        string              `json:"version"`
+	InformationURI string              `json:"informationUri,omitempty"`
+	Rules          []outputSarifRule   `json:"rules,omitempty"`
+}
+
+type outputSarifRule struct {
+	ID               string           `json:"id"`
+	Name             string           `json:"name,omitempty"`
+	ShortDescription outputSarifMessage `json:"shortDescription"`
+}
+
+type outputSarifResult struct {
+	RuleID    string               `json:"ruleId"`
+	Level     string               `json:"level"`
+	Message   outputSarifMessage    `json:"message"`
+	Locations []outputSarifLocation `json:"locations,omitempty"`
+}
+
+type outputSarifMessage struct {
+	Text string `json:"text"`
+}
+
+type outputSarifLocation struct {
+	PhysicalLocation *outputSarifPhysicalLocation `json:"physicalLocation,omitempty"`
+}
+
+type outputSarifPhysicalLocation struct {
+	ArtifactLocation outputSarifArtifactLocation `json:"artifactLocation"`
+	Region           *outputSarifRegion          `json:"region,omitempty"`
+}
+
+type outputSarifArtifactLocation struct {
+	URI string `json:"uri"`
+}
+
+type outputSarifRegion struct {
+	StartLine int `json:"startLine,omitempty"`
+	EndLine   int `json:"endLine,omitempty"`
+}
+
+// FormatSARIF produces a SARIF 2.1.0 JSON report from findings.
+func FormatSARIF(findings []Finding, version string) string {
+	if version == "" {
+		version = "dev"
+	}
+
+	severityToLevel := func(s int) string {
+		switch {
+		case s >= 4: // Critical
+			return "error"
+		case s >= 3: // High
+			return "error"
+		case s >= 2: // Medium
+			return "warning"
+		case s >= 1: // Low
+			return "note"
+		default: // Info
+			return "none"
+		}
+	}
+
+	ruleSet := make(map[string]bool)
+	var rules []outputSarifRule
+	for _, f := range findings {
+		id := f.Concern
+		if id == "" {
+			id = "unknown"
+		}
+		if ruleSet[id] {
+			continue
+		}
+		ruleSet[id] = true
+		rules = append(rules, outputSarifRule{
+			ID:               id,
+			Name:             id,
+			ShortDescription: outputSarifMessage{Text: id + " check"},
+		})
+	}
+
+	var results []outputSarifResult
+	for _, f := range findings {
+		id := f.Concern
+		if id == "" {
+			id = "unknown"
+		}
+		msg := f.Message
+		if f.Fix != "" {
+			msg += "\n\nFix: " + f.Fix
+		}
+		r := outputSarifResult{
+			RuleID:  id,
+			Level:   severityToLevel(f.Severity),
+			Message: outputSarifMessage{Text: msg},
+		}
+		if f.File != "" {
+			region := &outputSarifRegion{}
+			if f.Line > 0 {
+				region.StartLine = f.Line
+			}
+			if f.EndLine > 0 && f.EndLine != f.Line {
+				region.EndLine = f.EndLine
+			}
+			if region.StartLine == 0 {
+				region = nil
+			}
+			r.Locations = append(r.Locations, outputSarifLocation{
+				PhysicalLocation: &outputSarifPhysicalLocation{
+					ArtifactLocation: outputSarifArtifactLocation{URI: f.File},
+					Region:           region,
+				},
+			})
+		}
+		results = append(results, r)
+	}
+
+	log := outputSarifLog{
+		Version: "2.1.0",
+		Schema:  "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+		Runs: []outputSarifRun{{
+			Tool: outputSarifTool{Driver: outputSarifDriver{
+				Name:           "sight",
+				Version:        version,
+				InformationURI: "https://github.com/GrayCodeAI/sight",
+				Rules:          rules,
+			}},
+			Results: results,
+		}},
+	}
+
+	data, err := json.MarshalIndent(log, "", "  ")
+	if err != nil {
+		return `{"error": "failed to generate SARIF"}`
+	}
+	return string(data)
+}
+
 // FormatGitHubReview formats all findings as a single GitHub PR review body.
 func FormatGitHubReview(findings []Finding) string {
 	if len(findings) == 0 {
