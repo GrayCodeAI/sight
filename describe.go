@@ -139,7 +139,7 @@ func buildDescribePrompt(files []diff.File, maxTokens int) string {
 func parseDescription(response string, files []diff.File) *Description {
 	desc := &Description{}
 
-	jsonStr := extractJSONObject(response)
+	jsonStr := review.ExtractJSONObject(response)
 	if jsonStr != "" {
 		if err := json.Unmarshal([]byte(jsonStr), desc); err == nil && desc.Title != "" {
 			return desc
@@ -152,42 +152,4 @@ func parseDescription(response string, files []diff.File) *Description {
 	desc.ChangeType = "chore"
 	desc.Risk = "low"
 	return desc
-}
-
-func extractJSONObject(s string) string {
-	s = strings.TrimSpace(s)
-
-	if strings.Contains(s, "```json") {
-		parts := strings.SplitN(s, "```json", 2)
-		if len(parts) == 2 {
-			end := strings.Index(parts[1], "```")
-			if end != -1 {
-				s = strings.TrimSpace(parts[1][:end])
-			} else {
-				s = strings.TrimSpace(parts[1])
-			}
-		}
-	} else if strings.Contains(s, "```") {
-		parts := strings.SplitN(s, "```", 2)
-		if len(parts) == 2 {
-			rest := parts[1]
-			if idx := strings.Index(rest, "\n"); idx != -1 {
-				rest = rest[idx+1:]
-			}
-			end := strings.Index(rest, "```")
-			if end != -1 {
-				s = strings.TrimSpace(rest[:end])
-			}
-		}
-	}
-
-	start := strings.Index(s, "{")
-	if start == -1 {
-		return ""
-	}
-	end := strings.LastIndex(s, "}")
-	if end == -1 || end <= start {
-		return ""
-	}
-	return s[start : end+1]
 }

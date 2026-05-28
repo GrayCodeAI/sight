@@ -20,10 +20,19 @@ type Convention struct {
 	Pattern     string // regex pattern that indicates violation
 	FilePattern string // only check files matching this glob
 	Severity    Severity
+	compiledRe  *regexp.Regexp // pre-compiled pattern
 }
 
 // NewConventionChecker creates a checker with the given conventions.
 func NewConventionChecker(conventions []Convention) *ConventionChecker {
+	// Pre-compile regex patterns for performance.
+	for i := range conventions {
+		if conventions[i].Pattern != "" {
+			if re, err := regexp.Compile(conventions[i].Pattern); err == nil {
+				conventions[i].compiledRe = re
+			}
+		}
+	}
 	return &ConventionChecker{conventions: conventions}
 }
 
@@ -64,12 +73,8 @@ func (cc *ConventionChecker) Check(diff string) []Finding {
 			if conv.FilePattern != "" && !matchGlob(currentFile, conv.FilePattern) {
 				continue
 			}
-			if conv.Pattern != "" {
-				re, err := regexp.Compile(conv.Pattern)
-				if err != nil {
-					continue
-				}
-				if re.MatchString(addedContent) {
+			if conv.compiledRe != nil {
+				if conv.compiledRe.MatchString(addedContent) {
 					findings = append(findings, Finding{
 						File:     currentFile,
 						Line:     lineNum,
