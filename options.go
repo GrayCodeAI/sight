@@ -39,6 +39,7 @@ type config struct {
 	symbols        bool
 	parallel       bool
 	reflection     bool
+	preAnalysis    bool
 	exclude        []string
 	minScore       int
 	projectRules   string
@@ -163,6 +164,14 @@ func WithParallel(enabled bool) Option {
 
 func WithReflection(enabled bool) Option {
 	return optFunc(func(c *config) { c.reflection = enabled })
+}
+
+// WithPreAnalysis enables or disables static analysis and taint analysis
+// as a pre-pass before the LLM review. When enabled, pattern-based static rules
+// and data-flow taint analysis are run on the diff, and their findings are
+// included in the review results alongside LLM findings.
+func WithPreAnalysis(enabled bool) Option {
+	return optFunc(func(c *config) { c.preAnalysis = enabled })
 }
 
 // WithExclude sets file path patterns to exclude from review.

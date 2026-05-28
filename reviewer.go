@@ -70,6 +70,40 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 		gitContextStr = gitctx.FormatContext(contexts)
 	}
 
+	allFindings := make([]Finding, 0, 64)
+
+	// Run static analysis and taint analysis as a pre-pass when enabled.
+	// These pattern-based checks run before the LLM review and include their
+	// findings in the final results alongside LLM findings.
+	if r.cfg.preAnalysis {
+		// Run static analysis (pattern-based rules) on the diff
+		staticAnalyzer := NewStaticAnalyzer()
+		for _, f := range files {
+			if f.Path == "" {
+				continue
+			}
+			lang := DetectLanguage(f.Path)
+			var addedLines []string
+			for _, hunk := range f.Hunks {
+				for _, line := range hunk.Lines {
+					if line.Type == diff.LineAdded {
+						addedLines = append(addedLines, line.Content)
+					}
+				}
+			}
+			if len(addedLines) > 0 {
+				content := strings.Join(addedLines, "\n")
+				staticFindings := staticAnalyzer.AnalyzeFileWithPath(content, lang, f.Path)
+				allFindings = append(allFindings, staticFindings...)
+			}
+		}
+
+		// Run taint analysis (data-flow tracking) on Go files in the diff
+		taintAnalyzer := NewTaintAnalyzer()
+		taintFindings := taintAnalyzer.AnalyzeDiff(rawDiff)
+		allFindings = append(allFindings, taintFindings...)
+	}
+
 	concerns := review.BuildConcerns(r.cfg.concerns)
 	// Append custom concerns loaded from .sight/checks/ markdown files
 	if len(r.cfg.customConcerns) > 0 {
@@ -77,11 +111,10 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 	}
 
 	var (
-		mu          sync.Mutex
-		allFindings []Finding
-		tokensUsed  int
-		durations   = make(map[string]time.Duration)
-		llmErrors   []string
+		mu         sync.Mutex
+		tokensUsed int
+		durations  = make(map[string]time.Duration)
+		llmErrors  []string
 	)
 
 	// Token budget: estimate prompt size and chunk if needed
