@@ -10,8 +10,8 @@ func TestNewStaticAnalyzer(t *testing.T) {
 	if sa == nil {
 		t.Fatal("NewStaticAnalyzer returned nil")
 	}
-	if len(sa.Rules) < 30 {
-		t.Errorf("expected at least 30 default rules, got %d", len(sa.Rules))
+	if len(sa.Rules) < 50 {
+		t.Errorf("expected at least 50 default rules, got %d", len(sa.Rules))
 	}
 }
 
@@ -26,8 +26,15 @@ func TestDetectLanguage(t *testing.T) {
 		{"index.tsx", "typescript"},
 		{"app.js", "javascript"},
 		{"app.jsx", "javascript"},
-		{"unknown.rb", "any"},
+		{"unknown.rb", "ruby"},
 		{"path/to/File.GO", "go"},
+		{"lib.rs", "rust"},
+		{"Main.java", "java"},
+		{"main.c", "c"},
+		{"main.h", "c"},
+		{"app.cpp", "cpp"},
+		{"app.hpp", "cpp"},
+		{"schema.sql", "sql"},
 	}
 	for _, tt := range tests {
 		got := DetectLanguage(tt.path)
