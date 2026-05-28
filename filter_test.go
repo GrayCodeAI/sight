@@ -214,10 +214,10 @@ func TestFilterFindings_ConcurrentExecution(t *testing.T) {
 
 	// Create a concurrency-tracking provider
 	concProvider := &concurrencyTracker{
-		response:        "CONFIRMED: yes\nCONFIDENCE: 0.8",
-		maxConcurrent:   &maxConcurrent,
-		curConcurrent:   &currentConcurrent,
-		simulatedDelay:  10 * time.Millisecond,
+		response:       "CONFIRMED: yes\nCONFIDENCE: 0.8",
+		maxConcurrent:  &maxConcurrent,
+		curConcurrent:  &currentConcurrent,
+		simulatedDelay: 10 * time.Millisecond,
 	}
 
 	_, results, err := sight.FilterFindings(
@@ -243,11 +243,11 @@ func TestFilterFindings_ConcurrentExecution(t *testing.T) {
 }
 
 type concurrencyTracker struct {
-	response        string
-	maxConcurrent   *int32
-	curConcurrent   *int32
-	simulatedDelay  time.Duration
-	mu              sync.Mutex
+	response       string
+	maxConcurrent  *int32
+	curConcurrent  *int32
+	simulatedDelay time.Duration
+	mu             sync.Mutex
 }
 
 func (c *concurrencyTracker) Chat(ctx context.Context, messages []sight.Message, opts sight.ChatOpts) (*sight.Response, error) {
