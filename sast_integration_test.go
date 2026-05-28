@@ -70,8 +70,8 @@ func TestAnalyze_InvokesCustomCheck(t *testing.T) {
 
 	called := false
 	s.checks = append(s.checks, SASTCheck{
-		ID:       "custom-test",
-		Name:     "Custom Test",
+		ID:        "custom-test",
+		Name:      "Custom Test",
 		Languages: []string{},
 		Check: func(source, filePath string) []SASTFinding {
 			called = true
