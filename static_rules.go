@@ -54,10 +54,12 @@ func (sa *StaticAnalyzer) Analyze(diff string, language string) []Finding {
 	for _, raw := range strings.Split(diff, "\n") {
 		if strings.HasPrefix(raw, "+++ b/") {
 			currentFile = strings.TrimPrefix(raw, "+++ b/")
+			lineNum = 0
 			continue
 		}
 		if strings.HasPrefix(raw, "+++ ") {
 			currentFile = strings.TrimPrefix(raw, "+++ ")
+			lineNum = 0
 			continue
 		}
 		if strings.HasPrefix(raw, "@@ ") {

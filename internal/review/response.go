@@ -193,6 +193,43 @@ func capStr(s string, maxLen int) string {
 
 // extractJSON finds and returns the JSON array from potentially wrapped response text.
 func extractJSON(s string) string {
+	return ExtractJSONArray(s)
+}
+
+// ExtractJSONArray finds and returns the first JSON array from potentially
+// wrapped LLM response text. Handles markdown code fences and leading/trailing text.
+func ExtractJSONArray(s string) string {
+	s = stripCodeFences(s)
+
+	start := strings.Index(s, "[")
+	if start == -1 {
+		return ""
+	}
+	end := strings.LastIndex(s, "]")
+	if end == -1 || end <= start {
+		return ""
+	}
+	return s[start : end+1]
+}
+
+// ExtractJSONObject finds and returns the first JSON object from potentially
+// wrapped LLM response text. Handles markdown code fences and leading/trailing text.
+func ExtractJSONObject(s string) string {
+	s = stripCodeFences(s)
+
+	start := strings.Index(s, "{")
+	if start == -1 {
+		return ""
+	}
+	end := strings.LastIndex(s, "}")
+	if end == -1 || end <= start {
+		return ""
+	}
+	return s[start : end+1]
+}
+
+// stripCodeFences removes ```json ... ``` or ``` ... ``` wrappers from s.
+func stripCodeFences(s string) string {
 	s = strings.TrimSpace(s)
 
 	if strings.Contains(s, "```json") {
@@ -200,10 +237,9 @@ func extractJSON(s string) string {
 		if len(parts) == 2 {
 			end := strings.Index(parts[1], "```")
 			if end != -1 {
-				s = strings.TrimSpace(parts[1][:end])
-			} else {
-				s = strings.TrimSpace(parts[1])
+				return strings.TrimSpace(parts[1][:end])
 			}
+			return strings.TrimSpace(parts[1])
 		}
 	} else if strings.Contains(s, "```") {
 		parts := strings.SplitN(s, "```", 2)
@@ -214,23 +250,12 @@ func extractJSON(s string) string {
 			}
 			end := strings.Index(rest, "```")
 			if end != -1 {
-				s = strings.TrimSpace(rest[:end])
-			} else {
-				s = strings.TrimSpace(rest)
+				return strings.TrimSpace(rest[:end])
 			}
+			return strings.TrimSpace(rest)
 		}
 	}
-
-	start := strings.Index(s, "[")
-	if start == -1 {
-		return ""
-	}
-	end := strings.LastIndex(s, "]")
-	if end == -1 || end <= start {
-		return ""
-	}
-
-	return s[start : end+1]
+	return s
 }
 
 func parseSeverity(s string) Severity {

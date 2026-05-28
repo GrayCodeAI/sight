@@ -179,14 +179,25 @@ func loadFileLines(ctx context.Context, filePath string, startLine, endLine int)
 		startLine = 1
 	}
 
-	f, err := os.Open(filePath)
+	// Sanitize the path to prevent path traversal attacks.
+	cleanPath := filepath.Clean(filePath)
+	if strings.Contains(cleanPath, "..") {
+		return nil
+	}
+
+	f, err := os.Open(cleanPath)
 	if err != nil {
 		// Try to find the file relative to git root
 		root, rerr := gitRoot(ctx)
 		if rerr != nil {
 			return nil
 		}
-		f, err = os.Open(filepath.Join(root, filePath))
+		joinedPath := filepath.Join(root, cleanPath)
+		// Verify the resolved path is still within the git root.
+		if !strings.HasPrefix(filepath.Clean(joinedPath), filepath.Clean(root)) {
+			return nil
+		}
+		f, err = os.Open(joinedPath)
 		if err != nil {
 			return nil
 		}

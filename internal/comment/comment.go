@@ -131,7 +131,7 @@ func buildDiffLineSet(file diff.File) diffLineSet {
 	for _, hunk := range file.Hunks {
 		start := hunk.NewStart
 		end := hunk.NewStart + hunk.NewCount
-		for i := start; i <= end; i++ {
+		for i := start; i < end; i++ {
 			s.newRangeLines[i] = true
 			s.contextLines[i] = true
 		}

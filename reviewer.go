@@ -90,6 +90,11 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 	runConcern := func(concern review.Concern) {
 		start := time.Now()
 
+		// Early exit if context is already cancelled.
+		if ctx.Err() != nil {
+			return
+		}
+
 		chunks := review.ChunkFiles(files, concern, r.cfg.contextLines, maxPromptTokens)
 
 		var concernFindings []review.Finding
@@ -97,6 +102,12 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 		var concernErrors []string
 
 		for _, chunk := range chunks {
+			// Check context between chunks to avoid unnecessary LLM calls.
+			if ctx.Err() != nil {
+				concernErrors = append(concernErrors, fmt.Sprintf("[%s] context cancelled", concern.Name))
+				break
+			}
+
 			prompt := review.BuildPromptEnhanced(concern, chunk, r.cfg.contextLines)
 			if gitContextStr != "" {
 				prompt += gitContextStr
@@ -136,6 +147,10 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 	if r.cfg.parallel && len(concerns) > 1 {
 		var wg sync.WaitGroup
 		for _, concern := range concerns {
+			// Don't launch new goroutines if context is already cancelled.
+			if ctx.Err() != nil {
+				break
+			}
 			wg.Add(1)
 			go func(c review.Concern) {
 				defer wg.Done()
@@ -145,6 +160,9 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 		wg.Wait()
 	} else {
 		for _, concern := range concerns {
+			if ctx.Err() != nil {
+				break
+			}
 			runConcern(concern)
 		}
 	}
