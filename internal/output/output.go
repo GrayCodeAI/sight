@@ -150,9 +150,9 @@ func FormatJSON(findings []Finding) (string, error) {
 // SARIF 2.1.0 output types (package-level so they can reference each other).
 
 type outputSarifLog struct {
-	Version string              `json:"version"`
-	Schema  string              `json:"$schema"`
-	Runs    []outputSarifRun    `json:"runs"`
+	Version string           `json:"version"`
+	Schema  string           `json:"$schema"`
+	Runs    []outputSarifRun `json:"runs"`
 }
 
 type outputSarifRun struct {
@@ -165,21 +165,21 @@ type outputSarifTool struct {
 }
 
 type outputSarifDriver struct {
-	Name           string              `json:"name"`
-	Version        string              `json:"version"`
-	InformationURI string              `json:"informationUri,omitempty"`
-	Rules          []outputSarifRule   `json:"rules,omitempty"`
+	Name           string            `json:"name"`
+	Version        string            `json:"version"`
+	InformationURI string            `json:"informationUri,omitempty"`
+	Rules          []outputSarifRule `json:"rules,omitempty"`
 }
 
 type outputSarifRule struct {
-	ID               string           `json:"id"`
-	Name             string           `json:"name,omitempty"`
+	ID               string             `json:"id"`
+	Name             string             `json:"name,omitempty"`
 	ShortDescription outputSarifMessage `json:"shortDescription"`
 }
 
 type outputSarifResult struct {
-	RuleID    string               `json:"ruleId"`
-	Level     string               `json:"level"`
+	RuleID    string                `json:"ruleId"`
+	Level     string                `json:"level"`
 	Message   outputSarifMessage    `json:"message"`
 	Locations []outputSarifLocation `json:"locations,omitempty"`
 }

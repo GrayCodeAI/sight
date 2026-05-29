@@ -16,16 +16,16 @@ type TaintAnalyzer struct{}
 
 // TaintFinding represents a data-flow vulnerability where tainted data reaches a sink.
 type TaintFinding struct {
-	Source     string // description of the taint source
-	Sink       string // description of the sink
-	SinkType   string // category: "sql_injection", "command_injection", "path_traversal", "log_leak"
-	Variable   string // the tainted variable name
-	File       string
-	Line       int
-	Severity   string
-	CWE        string
-	Message    string
-	Fix        string
+	Source   string // description of the taint source
+	Sink     string // description of the sink
+	SinkType string // category: "sql_injection", "command_injection", "path_traversal", "log_leak"
+	Variable string // the tainted variable name
+	File     string
+	Line     int
+	Severity string
+	CWE      string
+	Message  string
+	Fix      string
 }
 
 // NewTaintAnalyzer creates a TaintAnalyzer ready for use.
@@ -215,44 +215,44 @@ type taintSink struct {
 var goTaintSinks = []taintSink{
 	// SQL injection — match any .Query(), .QueryRow(), .Exec() call
 	{
-		Name: "SQL query execution",
-		CWE:  "CWE-89",
-		Fix:  "Use parameterized queries with db.Query(sql, args...) instead of string concatenation",
+		Name:    "SQL query execution",
+		CWE:     "CWE-89",
+		Fix:     "Use parameterized queries with db.Query(sql, args...) instead of string concatenation",
 		Pattern: regexp.MustCompile(`(?:\.Query|\.QueryRow|\.Exec)\s*\(`),
 	},
 	// Command injection
 	{
-		Name: "command execution",
-		CWE:  "CWE-78",
-		Fix:  "Validate and sanitize input before passing to exec.Command; use an allowlist of commands",
+		Name:    "command execution",
+		CWE:     "CWE-78",
+		Fix:     "Validate and sanitize input before passing to exec.Command; use an allowlist of commands",
 		Pattern: regexp.MustCompile(`exec\.Command\s*\(`),
 	},
 	// Path traversal — os.Open, os.Create, os.ReadFile, os.WriteFile
 	{
-		Name: "file operation",
-		CWE:  "CWE-22",
-		Fix:  "Use filepath.Clean() and validate the path is within the expected directory",
+		Name:    "file operation",
+		CWE:     "CWE-22",
+		Fix:     "Use filepath.Clean() and validate the path is within the expected directory",
 		Pattern: regexp.MustCompile(`os\.(?:Open|Create|ReadFile|WriteFile|Remove|MkdirAll)\s*\(`),
 	},
 	// HTTP response writing with tainted data
 	{
-		Name: "HTTP response write",
-		CWE:  "CWE-79",
-		Fix:  "Sanitize output before writing to HTTP response to prevent XSS",
+		Name:    "HTTP response write",
+		CWE:     "CWE-79",
+		Fix:     "Sanitize output before writing to HTTP response to prevent XSS",
 		Pattern: regexp.MustCompile(`(?:w|rw|resp|response)\.(?:Write|WriteHeader)\s*\(`),
 	},
 	// Log output
 	{
-		Name: "log output",
-		CWE:  "CWE-532",
-		Fix:  "Avoid logging sensitive user data; redact or mask before logging",
+		Name:    "log output",
+		CWE:     "CWE-532",
+		Fix:     "Avoid logging sensitive user data; redact or mask before logging",
 		Pattern: regexp.MustCompile(`(?:log\.|slog\.|logger\.|fmt\.Print)(?:Println|Printf|Info|Debug|Warn|Error|Fatal|Sprintf|Sprintln)`),
 	},
 	// Template execution (XSS)
 	{
-		Name: "template execution",
-		CWE:  "CWE-79",
-		Fix:  "Use html/template instead of text/template; sanitize user input before template rendering",
+		Name:    "template execution",
+		CWE:     "CWE-79",
+		Fix:     "Use html/template instead of text/template; sanitize user input before template rendering",
 		Pattern: regexp.MustCompile(`\.Execute\s*\(`),
 	},
 }
