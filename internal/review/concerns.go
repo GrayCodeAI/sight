@@ -22,15 +22,16 @@ type Concern struct {
 
 // Finding is an internal finding produced by a concern review.
 type Finding struct {
-	Concern   string
-	Severity  Severity
-	File      string
-	Line      int
-	EndLine   int
-	Message   string
-	Fix       string
-	Reasoning string
-	CWE       string
+	Concern    string
+	Severity   Severity
+	File       string
+	Line       int
+	EndLine    int
+	Message    string
+	Fix        string
+	Reasoning  string
+	CWE        string
+	Confidence float64
 }
 
 // AllConcerns returns every available concern definition.

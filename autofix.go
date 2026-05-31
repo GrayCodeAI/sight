@@ -18,6 +18,27 @@ type FixSuggestion struct {
 	FixedCode   string  // the corrected code
 	Explanation string  // why this fix works
 	Confidence  float64 // 0-1 how confident the fix is correct
+
+	// Additional fields used by the pattern-based fix pipeline (fix_pipeline.go).
+
+	// FindingID links this suggestion back to the originating Finding.
+	FindingID string `json:"finding_id"`
+	// Title is a short, human-readable summary of the fix.
+	Title string `json:"title"`
+	// Description explains why the fix is needed and what it does.
+	Description string `json:"description"`
+	// FixCode contains the suggested code or configuration change.
+	FixCode string `json:"fix_code"`
+	// Category classifies the fix area, e.g. "input-validation", "auth",
+	// "crypto", "injection", "xss", "ssrf".
+	Category string `json:"category"`
+	// Severity mirrors the severity of the original finding.
+	Severity string `json:"severity"`
+	// EstimatedEffort indicates how much work the fix requires:
+	// "trivial", "easy", "moderate", or "complex".
+	EstimatedEffort string `json:"estimated_effort"`
+	// Priority ranks this suggestion (1 = highest, 5 = lowest).
+	Priority int `json:"priority"`
 }
 
 // NewAutoFix creates an auto-fixer using the given LLM provider.

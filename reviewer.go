@@ -71,6 +71,9 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 	}
 
 	allFindings := make([]Finding, 0, 64)
+	// sastFindings collects pre-analysis findings for SAST-LLM fusion.
+	// These are marked with SASTSource=true and injected into the LLM prompt.
+	var sastFindings []Finding
 
 	// Run static analysis and taint analysis as a pre-pass when enabled.
 	// These pattern-based checks run before the LLM review and include their
@@ -94,6 +97,11 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 			if len(addedLines) > 0 {
 				content := strings.Join(addedLines, "\n")
 				staticFindings := staticAnalyzer.AnalyzeFileWithPath(content, lang, f.Path)
+				// Compute confidence for each static finding based on its rule.
+				for i := range staticFindings {
+					rule := findMatchingRule(staticAnalyzer.Rules, staticFindings[i])
+					staticFindings[i].Confidence = CalculateStaticConfidence(staticFindings[i], rule)
+				}
 				allFindings = append(allFindings, staticFindings...)
 			}
 		}
@@ -101,7 +109,26 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 		// Run taint analysis (data-flow tracking) on Go files in the diff
 		taintAnalyzer := NewTaintAnalyzer()
 		taintFindings := taintAnalyzer.AnalyzeDiff(rawDiff)
+		// Compute confidence for each taint finding.
+		for i := range taintFindings {
+			taintFindings[i].Confidence = CalculateTaintConfidence(
+				extractTaintSource(taintFindings[i].Message),
+				extractTaintSink(taintFindings[i].Message),
+				nil, // sanitizers already filtered out; no additional info available
+			)
+		}
 		allFindings = append(allFindings, taintFindings...)
+
+		// Mark all pre-analysis findings as SAST-originated and collect
+		// them for injection into the LLM prompt (SAST-LLM fusion).
+		for i := len(allFindings) - 1; i >= 0; i-- {
+			if !allFindings[i].SASTSource {
+				allFindings[i].SASTSource = true
+			}
+		}
+		// Copy the SAST findings collected so far for prompt injection.
+		sastFindings = make([]Finding, len(allFindings))
+		copy(sastFindings, allFindings)
 	}
 
 	concerns := review.BuildConcerns(r.cfg.concerns)
@@ -142,6 +169,11 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 			}
 
 			prompt := review.BuildPromptEnhanced(concern, chunk, r.cfg.contextLines)
+			// Inject SAST pre-analysis findings into the LLM prompt so the
+			// LLM can validate or dismiss each static analysis finding.
+			if len(sastFindings) > 0 {
+				prompt = BuildFusedPrompt(prompt, sastFindings)
+			}
 			if gitContextStr != "" {
 				prompt += gitContextStr
 			}
@@ -202,6 +234,20 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 
 	allFindings = dedup(allFindings)
 
+	// Track SAST-LLM fusion outcomes: which SAST findings did the LLM confirm vs dismiss.
+	var fusionResult *SASTFusionResult
+	if len(sastFindings) > 0 {
+		// Separate LLM findings (not from SAST) for comparison.
+		var llmFindings []Finding
+		for _, f := range allFindings {
+			if !f.SASTSource {
+				llmFindings = append(llmFindings, f)
+			}
+		}
+		result := TrackSASTOutcome(sastFindings, llmFindings)
+		fusionResult = &result
+	}
+
 	// Self-reflection pass: validate findings with a second LLM call
 	if r.cfg.reflection && len(allFindings) > 0 && ctx.Err() == nil {
 		allFindings = r.reflect(ctx, allFindings, rawDiff, &tokensUsed)
@@ -239,17 +285,25 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 		byConcern[f.Concern]++
 	}
 
+	avgConf, highConfCount, lowConfCount := ComputeConfidenceStats(allFindings)
+	breakdown := BuildConfidenceBreakdown(allFindings)
+
 	result := &Result{
-		Findings: allFindings,
-		Comments: toPublicComments(comments),
+		Findings:            allFindings,
+		Comments:            toPublicComments(comments),
+		SASTFusion:          fusionResult,
+		ConfidenceBreakdown: breakdown,
 		Stats: Stats{
-			FilesReviewed:      len(files),
-			HunksAnalyzed:      countHunks(files),
-			FindingsTotal:      len(allFindings),
-			BySeverity:         bySev,
-			ByConcern:          byConcern,
-			TokensUsed:         tokensUsed,
-			DurationPerConcern: durations,
+			FilesReviewed:       len(files),
+			HunksAnalyzed:       countHunks(files),
+			FindingsTotal:       len(allFindings),
+			BySeverity:          bySev,
+			ByConcern:           byConcern,
+			TokensUsed:          tokensUsed,
+			DurationPerConcern:  durations,
+			AverageConfidence:   avgConf,
+			HighConfidenceCount: highConfCount,
+			LowConfidenceCount:  lowConfCount,
 		},
 		FailOn: r.cfg.failOn,
 	}
@@ -318,16 +372,21 @@ func toPublicFindings(internal []review.Finding) []Finding {
 		if cwe == "" {
 			cwe = review.MatchCWE(f.Message, f.Fix)
 		}
+		conf := f.Confidence
+		if conf <= 0 || conf > 1.0 {
+			conf = 0.6 // default for LLM findings
+		}
 		out[i] = Finding{
-			Concern:   f.Concern,
-			Severity:  Severity(f.Severity),
-			File:      f.File,
-			Line:      f.Line,
-			EndLine:   f.EndLine,
-			Message:   f.Message,
-			Fix:       f.Fix,
-			Reasoning: f.Reasoning,
-			CWE:       cwe,
+			Concern:    f.Concern,
+			Severity:   Severity(f.Severity),
+			File:       f.File,
+			Line:       f.Line,
+			EndLine:    f.EndLine,
+			Message:    f.Message,
+			Fix:        f.Fix,
+			Reasoning:  f.Reasoning,
+			CWE:        cwe,
+			Confidence: conf,
 		}
 	}
 	return out
@@ -418,19 +477,67 @@ func matchesExclude(path string, patterns []string) bool {
 	return false
 }
 
+// findMatchingRule returns the StaticRule that produced a given finding,
+// or a zero-value StaticRule if no match is found.
+func findMatchingRule(rules []StaticRule, f Finding) StaticRule {
+	for _, rule := range rules {
+		// Match by rule ID embedded in the message.
+		if f.Concern == "static:"+rule.Category &&
+			strings.Contains(f.Message, rule.ID) {
+			return rule
+		}
+	}
+	return StaticRule{}
+}
+
+// extractTaintSource extracts the taint source description from a taint finding
+// message. The message format is:
+//
+//	[TAINT-<type>] <type>: <source> -> <sink> via variable "<var>"
+func extractTaintSource(msg string) string {
+	// Find content after "] " and before " -> "
+	idx := strings.Index(msg, "] ")
+	if idx < 0 {
+		return "unknown"
+	}
+	rest := msg[idx+2:]
+	// Skip the sink type prefix: "type: "
+	if colonIdx := strings.Index(rest, ": "); colonIdx >= 0 {
+		rest = rest[colonIdx+2:]
+	}
+	if arrowIdx := strings.Index(rest, " -> "); arrowIdx >= 0 {
+		return rest[:arrowIdx]
+	}
+	return "unknown"
+}
+
+// extractTaintSink extracts the sink description from a taint finding message.
+func extractTaintSink(msg string) string {
+	arrowIdx := strings.Index(msg, " -> ")
+	if arrowIdx < 0 {
+		return "unknown"
+	}
+	rest := msg[arrowIdx+4:]
+	if viaIdx := strings.Index(rest, " via variable"); viaIdx >= 0 {
+		return rest[:viaIdx]
+	}
+	return rest
+}
+
 // reflect runs the self-reflection pass to validate findings.
 func (r *Reviewer) reflect(ctx context.Context, findings []Finding, rawDiff string, tokensUsed *int) []Finding {
 	internalFindings := make([]review.Finding, len(findings))
 	for i, f := range findings {
 		internalFindings[i] = review.Finding{
-			Concern:   f.Concern,
-			Severity:  review.Severity(f.Severity),
-			File:      f.File,
-			Line:      f.Line,
-			EndLine:   f.EndLine,
-			Message:   f.Message,
-			Fix:       f.Fix,
-			Reasoning: f.Reasoning,
+			Concern:    f.Concern,
+			Severity:   review.Severity(f.Severity),
+			File:       f.File,
+			Line:       f.Line,
+			EndLine:    f.EndLine,
+			Message:    f.Message,
+			Fix:        f.Fix,
+			Reasoning:  f.Reasoning,
+			Confidence: f.Confidence,
 		}
 	}
 
