@@ -29,9 +29,9 @@ type MemorySource interface {
 // MemoryBridge enriches code reviews with historical context from a
 // MemorySource and persists new findings back for future recall.
 type MemoryBridge struct {
-	source    MemorySource
+	source     MemorySource
 	maxContext int // maximum approximate tokens to include in enriched context
-	enabled   bool
+	enabled    bool
 }
 
 // MemoryBridgeOption configures a MemoryBridge.
@@ -41,9 +41,9 @@ type MemoryBridgeOption func(*MemoryBridge)
 // By default the bridge is enabled with a 2 000-token context budget.
 func NewMemoryBridge(source MemorySource, opts ...MemoryBridgeOption) *MemoryBridge {
 	b := &MemoryBridge{
-		source:    source,
+		source:     source,
 		maxContext: 2000,
-		enabled:   true,
+		enabled:    true,
 	}
 	for _, o := range opts {
 		o(b)
