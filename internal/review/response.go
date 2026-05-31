@@ -20,6 +20,7 @@ var (
 	regexFixRe    = regexp.MustCompile(`"fix"\s*:\s*"([^"]+)"`)
 	regexReasonRe = regexp.MustCompile(`"reasoning"\s*:\s*"([^"]+)"`)
 	regexCweRe    = regexp.MustCompile(`"cwe"\s*:\s*"([^"]*)"`)
+	regexConfRe   = regexp.MustCompile(`"confidence"\s*:\s*(\d+\.?\d*)`)
 	regexBlockRe  = regexp.MustCompile(`\{[^{}]+\}`)
 	// trailingCommaRe strips trailing commas before ] and } in JSON.
 	trailingCommaRe = regexp.MustCompile(`,\s*([}\]])`)
@@ -27,14 +28,15 @@ var (
 
 // rawFinding represents the JSON structure expected from the LLM.
 type rawFinding struct {
-	File      string `json:"file"`
-	Line      int    `json:"line"`
-	EndLine   int    `json:"end_line"`
-	Severity  string `json:"severity"`
-	Message   string `json:"message"`
-	Fix       string `json:"fix"`
-	Reasoning string `json:"reasoning"`
-	CWE       string `json:"cwe"`
+	File       string  `json:"file"`
+	Line       int     `json:"line"`
+	EndLine    int     `json:"end_line"`
+	Severity   string  `json:"severity"`
+	Message    string  `json:"message"`
+	Fix        string  `json:"fix"`
+	Reasoning  string  `json:"reasoning"`
+	CWE        string  `json:"cwe"`
+	Confidence float64 `json:"confidence,omitempty"`
 }
 
 // ParseResponse extracts structured findings from the LLM response text.
@@ -65,16 +67,21 @@ func ParseResponse(response string, concernName string) []Finding {
 		if r.Message == "" || r.File == "" {
 			continue
 		}
+		conf := r.Confidence
+		if conf <= 0 || conf > 1.0 {
+			conf = 0.6 // default LLM confidence when not specified
+		}
 		findings = append(findings, Finding{
-			Concern:   concernName,
-			Severity:  parseSeverity(r.Severity),
-			File:      r.File,
-			Line:      r.Line,
-			EndLine:   r.EndLine,
-			Message:   r.Message,
-			Fix:       r.Fix,
-			Reasoning: r.Reasoning,
-			CWE:       r.CWE,
+			Concern:    concernName,
+			Severity:   parseSeverity(r.Severity),
+			File:       r.File,
+			Line:       r.Line,
+			EndLine:    r.EndLine,
+			Message:    r.Message,
+			Fix:        r.Fix,
+			Reasoning:  r.Reasoning,
+			CWE:        r.CWE,
+			Confidence: conf,
 		})
 	}
 
@@ -175,6 +182,14 @@ func regexExtractFindings(s string, concernName string) []Finding {
 		}
 		if cweMatch := regexCweRe.FindStringSubmatch(block); cweMatch != nil {
 			f.CWE = cweMatch[1]
+		}
+		if confMatch := regexConfRe.FindStringSubmatch(block); confMatch != nil {
+			if v, err := strconv.ParseFloat(confMatch[1], 64); err == nil && v > 0 && v <= 1.0 {
+				f.Confidence = v
+			}
+		}
+		if f.Confidence <= 0 || f.Confidence > 1.0 {
+			f.Confidence = 0.6 // default LLM confidence
 		}
 
 		findings = append(findings, f)

@@ -36,6 +36,13 @@ type Finding struct {
 	Fix       string   `json:"fix,omitempty"`
 	Reasoning string   `json:"reasoning,omitempty"`
 	CWE       string   `json:"cwe,omitempty"`
+	// Confidence is a numeric score from 0.0 to 1.0 indicating how certain
+	// the system is that this finding is a true positive. Values closer to
+	// 1.0 mean higher confidence.
+	Confidence float64 `json:"confidence"`
+	// SASTSource marks findings that originated from static analysis (SAST)
+	// and were fed into the LLM prompt for validation.
+	SASTSource bool `json:"sast_source,omitempty"`
 }
 
 // InlineComment is a finding mapped to an exact position in a diff, ready for
@@ -57,6 +64,12 @@ type Stats struct {
 	ByConcern          map[string]int           `json:"by_concern"`
 	TokensUsed         int                      `json:"tokens_used"`
 	DurationPerConcern map[string]time.Duration `json:"duration_per_concern"`
+	// AverageConfidence is the mean confidence score across all findings (0.0-1.0).
+	AverageConfidence float64 `json:"average_confidence"`
+	// HighConfidenceCount is the number of findings with confidence >= 0.7.
+	HighConfidenceCount int `json:"high_confidence_count"`
+	// LowConfidenceCount is the number of findings with confidence < 0.5.
+	LowConfidenceCount int `json:"low_confidence_count"`
 }
 
 // Result is the complete output of a review operation.
@@ -66,6 +79,21 @@ type Result struct {
 	Stats    Stats           `json:"stats"`
 	Report   string          `json:"report"`
 	FailOn   Severity        `json:"fail_on"`
+	// SASTFusion tracks which SAST findings the LLM confirmed vs dismissed.
+	// Only populated when SAST-LLM fusion is active (preAnalysis enabled).
+	SASTFusion *SASTFusionResult `json:"sast_fusion,omitempty"`
+	// ConfidenceBreakdown groups findings by confidence band for quick triage.
+	ConfidenceBreakdown *ConfidenceBreakdown `json:"confidence_breakdown,omitempty"`
+}
+
+// ConfidenceBreakdown groups findings into bands for quick triage.
+type ConfidenceBreakdown struct {
+	// High are findings with confidence >= 0.7.
+	High []Finding `json:"high"`
+	// Medium are findings with 0.5 <= confidence < 0.7.
+	Medium []Finding `json:"medium"`
+	// Low are findings with confidence < 0.5.
+	Low []Finding `json:"low"`
 }
 
 // Failed returns true if any finding meets or exceeds the configured fail threshold.
