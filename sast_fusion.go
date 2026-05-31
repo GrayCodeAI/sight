@@ -38,9 +38,8 @@ func (sf *SASTFusion) FormatSASTForPrompt(findings []Finding) string {
 		limit = sf.MaxFindings
 	}
 
-	evLen := sf.MaxEvidenceLen
-	if evLen <= 0 {
-		evLen = 200
+	if sf.MaxEvidenceLen <= 0 {
+		sf.MaxEvidenceLen = 200
 	}
 
 	var b strings.Builder
@@ -64,10 +63,18 @@ func (sf *SASTFusion) FormatSASTForPrompt(findings []Finding) string {
 			severity = "unknown"
 		}
 
-		b.WriteString(fmt.Sprintf("- [%s] %s (%s)\n", severity, f.Message, f.Concern))
+		msg := f.Message
+		if sf.MaxEvidenceLen > 0 && len(msg) > sf.MaxEvidenceLen {
+			msg = msg[:sf.MaxEvidenceLen] + "..."
+		}
+		b.WriteString(fmt.Sprintf("- [%s] %s (%s)\n", severity, msg, f.Concern))
 		b.WriteString(fmt.Sprintf("  Location: %s\n", loc))
 		if f.Fix != "" {
-			b.WriteString(fmt.Sprintf("  Fix: %s\n", f.Fix))
+			fix := f.Fix
+			if sf.MaxEvidenceLen > 0 && len(fix) > sf.MaxEvidenceLen {
+				fix = fix[:sf.MaxEvidenceLen] + "..."
+			}
+			b.WriteString(fmt.Sprintf("  Fix: %s\n", fix))
 		}
 		b.WriteString("\n")
 	}
