@@ -90,3 +90,78 @@ func BenchmarkSummary(b *testing.B) {
 		Summary(files)
 	}
 }
+
+// BenchmarkParseDiff benchmarks parsing a realistic multi-file diff.
+func BenchmarkParseDiff(b *testing.B) {
+	const realisticDiff = `diff --git a/src/handler.go b/src/handler.go
+index a1b2c3d..e4f5g6h 100644
+--- a/src/handler.go
++++ b/src/handler.go
+@@ -15,12 +15,18 @@ import (
+ 	"net/http"
+ 	"encoding/json"
++	"fmt"
++	"log"
+ )
+
+ // HandleRequest processes incoming API requests.
+-func HandleRequest(w http.ResponseWriter, r *http.Request) {
+-	var req Request
+-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
++func HandleRequest(w http.ResponseWriter, r *http.Request) error {
++	var req *Request
++	if r.Body == nil {
++		return fmt.Errorf("empty request body")
++	}
++	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+ 		http.Error(w, err.Error(), http.StatusBadRequest)
+-		return
++		return err
+ 	}
++	log.Printf("processing request: %s", req.ID)
+ 	respond(w, process(req))
++	return nil
+ }
+diff --git a/src/model.go b/src/model.go
+index b2c3d4e..f5g6h7i 100644
+--- a/src/model.go
++++ b/src/model.go
+@@ -1,8 +1,12 @@
+ package src
+
++import "time"
++
+ type Request struct {
+-	ID    string ` + "`" + `json:"id"` + "`" + `
+-	Value int    ` + "`" + `json:"value"` + "`" + `
++	ID        string    ` + "`" + `json:"id"` + "`" + `
++	Value     int       ` + "`" + `json:"value"` + "`" + `
++	CreatedAt time.Time ` + "`" + `json:"created_at"` + "`" + `
++	UpdatedAt time.Time ` + "`" + `json:"updated_at"` + "`" + `
+ }
+ `
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Parse(realisticDiff)
+	}
+}
+
+// BenchmarkParseHunkHeader benchmarks parsing a hunk header line.
+func BenchmarkParseHunkHeader(b *testing.B) {
+	benchmarks := []struct {
+		name  string
+		input string
+	}{
+		{"Simple", "@@ -1,3 +1,4 @@"},
+		{"WithContext", "@@ -10,6 +10,8 @@ func main() {"},
+		{"NewFile", "@@ -0,0 +1,25 @@ package main"},
+		{"LargeNumbers", "@@ -999999,1000000 +999999,1000000 @@ func big() {"},
+	}
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				parseHunkHeader(bm.input)
+			}
+		})
+	}
+}
