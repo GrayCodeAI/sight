@@ -56,7 +56,7 @@ func CalculateStaticConfidence(finding Finding, rule StaticRule) float64 {
 func isFalsePositiveProne(id string) bool {
 	switch id {
 	case "COR-GO-001", // unchecked error — very noisy on benign calls
-		"COR-GO-002", // goroutine leak — often uses channels not visible in single line
+		"COR-GO-002",  // goroutine leak — often uses channels not visible in single line
 		"PERF-GO-003", // N+1 query — false positives on non-loop contexts
 		"PERF-PY-001", // N+1 query Python — same reason
 		"SEC-ANY-003": // HTTP in production — false positives on documentation/strings
@@ -88,7 +88,7 @@ func CalculateLLMConfidence(responseJSON string, finding Finding) float64 {
 	if idx := strings.Index(jsonStr, "```"); idx != -1 {
 		jsonStr = strings.TrimSpace(jsonStr[idx:])
 		if end := strings.Index(jsonStr[3:], "```"); end != -1 {
-			jsonStr = jsonStr[3:end+3]
+			jsonStr = jsonStr[3 : end+3]
 		}
 	}
 	start := strings.Index(jsonStr, "[")

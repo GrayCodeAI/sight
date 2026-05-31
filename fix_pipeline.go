@@ -145,9 +145,9 @@ func sqlInjectionRule() FixRule {
 		},
 		Generator: func(f Finding) FixSuggestion {
 			return FixSuggestion{
-				Title:       "Use parameterized queries to prevent SQL injection",
-				Description: fmt.Sprintf("The code in %s:%d uses string concatenation or formatting to build SQL queries, which enables SQL injection. Replace with parameterized queries (placeholders) so user input is never interpolated into the SQL string.", f.File, f.Line),
-				FixCode:     `// Before (vulnerable):\n//   query := fmt.Sprintf("SELECT * FROM users WHERE id = %s", userInput)\n//\n// After (safe):\n//   query := "SELECT * FROM users WHERE id = $1"\n//   rows, err := db.Query(query, userInput)`,
+				Title:           "Use parameterized queries to prevent SQL injection",
+				Description:     fmt.Sprintf("The code in %s:%d uses string concatenation or formatting to build SQL queries, which enables SQL injection. Replace with parameterized queries (placeholders) so user input is never interpolated into the SQL string.", f.File, f.Line),
+				FixCode:         `// Before (vulnerable):\n//   query := fmt.Sprintf("SELECT * FROM users WHERE id = %s", userInput)\n//\n// After (safe):\n//   query := "SELECT * FROM users WHERE id = $1"\n//   rows, err := db.Query(query, userInput)`,
 				Confidence:      0.85,
 				Category:        "injection",
 				Severity:        f.Severity.String(),
@@ -169,9 +169,9 @@ func xssRule() FixRule {
 		},
 		Generator: func(f Finding) FixSuggestion {
 			return FixSuggestion{
-				Title:       "Escape or sanitize user input before rendering in HTML",
-				Description: fmt.Sprintf("The code in %s:%d renders user-controlled data into HTML without proper escaping, enabling cross-site scripting. Use html.EscapeString or a template engine with auto-escaping enabled (e.g. html/template).", f.File, f.Line),
-				FixCode:     `// Option 1 — manual escaping:\n//   import "html"\n//   safe := html.EscapeString(userInput)\n//\n// Option 2 — use html/template (auto-escapes by default):\n//   tmpl := template.Must(template.New("page").Parse(tmplStr))\n//   tmpl.Execute(w, data)`,
+				Title:           "Escape or sanitize user input before rendering in HTML",
+				Description:     fmt.Sprintf("The code in %s:%d renders user-controlled data into HTML without proper escaping, enabling cross-site scripting. Use html.EscapeString or a template engine with auto-escaping enabled (e.g. html/template).", f.File, f.Line),
+				FixCode:         `// Option 1 — manual escaping:\n//   import "html"\n//   safe := html.EscapeString(userInput)\n//\n// Option 2 — use html/template (auto-escapes by default):\n//   tmpl := template.Must(template.New("page").Parse(tmplStr))\n//   tmpl.Execute(w, data)`,
 				Confidence:      0.85,
 				Category:        "xss",
 				Severity:        f.Severity.String(),
@@ -197,9 +197,9 @@ func hardcodedSecretRule() FixRule {
 		},
 		Generator: func(f Finding) FixSuggestion {
 			return FixSuggestion{
-				Title:       "Move secrets to environment variables or a secret manager",
-				Description: fmt.Sprintf("The code in %s:%d contains a hardcoded secret, credential, or API key. Hardcoded secrets are easily leaked through source control. Load secrets from environment variables or a dedicated secret manager (e.g. AWS Secrets Manager, HashiCorp Vault).", f.File, f.Line),
-				FixCode:     `// Before (vulnerable):\n//   const apiKey = "sk-abc123..."\n//\n// After (safe):\n//   import "os"\n//   apiKey := os.Getenv("API_KEY")\n//   if apiKey == "" {\n//       log.Fatal("API_KEY not set")\n//   }`,
+				Title:           "Move secrets to environment variables or a secret manager",
+				Description:     fmt.Sprintf("The code in %s:%d contains a hardcoded secret, credential, or API key. Hardcoded secrets are easily leaked through source control. Load secrets from environment variables or a dedicated secret manager (e.g. AWS Secrets Manager, HashiCorp Vault).", f.File, f.Line),
+				FixCode:         `// Before (vulnerable):\n//   const apiKey = "sk-abc123..."\n//\n// After (safe):\n//   import "os"\n//   apiKey := os.Getenv("API_KEY")\n//   if apiKey == "" {\n//       log.Fatal("API_KEY not set")\n//   }`,
 				Confidence:      0.90,
 				Category:        "auth",
 				Severity:        f.Severity.String(),
@@ -222,9 +222,9 @@ func inputValidationRule() FixRule {
 		},
 		Generator: func(f Finding) FixSuggestion {
 			return FixSuggestion{
-				Title:       "Add input validation middleware or handler-level checks",
-				Description: fmt.Sprintf("The code in %s:%d processes user input without adequate validation. Add validation at the handler or middleware layer to reject malformed input early. Use a validation library (e.g. go-playground/validator) or enforce constraints explicitly.", f.File, f.Line),
-				FixCode:     `// Example with go-playground/validator:\n//   import "github.com/go-playground/validator/v10"\n//   var validate = validator.New()\n//   if err := validate.Struct(input); err != nil {\n//       http.Error(w, "invalid input", http.StatusBadRequest)\n//       return\n//   }`,
+				Title:           "Add input validation middleware or handler-level checks",
+				Description:     fmt.Sprintf("The code in %s:%d processes user input without adequate validation. Add validation at the handler or middleware layer to reject malformed input early. Use a validation library (e.g. go-playground/validator) or enforce constraints explicitly.", f.File, f.Line),
+				FixCode:         `// Example with go-playground/validator:\n//   import "github.com/go-playground/validator/v10"\n//   var validate = validator.New()\n//   if err := validate.Struct(input); err != nil {\n//       http.Error(w, "invalid input", http.StatusBadRequest)\n//       return\n//   }`,
 				Confidence:      0.80,
 				Category:        "input-validation",
 				Severity:        f.Severity.String(),
@@ -251,9 +251,9 @@ func weakCryptoRule() FixRule {
 		},
 		Generator: func(f Finding) FixSuggestion {
 			return FixSuggestion{
-				Title:       "Replace weak cryptographic algorithm with a modern alternative",
-				Description: fmt.Sprintf("The code in %s:%d uses a weak or deprecated cryptographic algorithm. Replace MD5/SHA-1 with SHA-256 or SHA-3 for hashing, and use AES-GCM or ChaCha20-Poly1305 for symmetric encryption.", f.File, f.Line),
-				FixCode:     `// Hashing — replace MD5/SHA-1:\n//   import "crypto/sha256"\n//   hash := sha256.Sum256(data)\n//\n// Encryption — use AES-GCM:\n//   import "crypto/aes" + "crypto/cipher"\n//   block, _ := aes.NewCipher(key)\n//   gcm, _ := cipher.NewGCM(block)`,
+				Title:           "Replace weak cryptographic algorithm with a modern alternative",
+				Description:     fmt.Sprintf("The code in %s:%d uses a weak or deprecated cryptographic algorithm. Replace MD5/SHA-1 with SHA-256 or SHA-3 for hashing, and use AES-GCM or ChaCha20-Poly1305 for symmetric encryption.", f.File, f.Line),
+				FixCode:         `// Hashing — replace MD5/SHA-1:\n//   import "crypto/sha256"\n//   hash := sha256.Sum256(data)\n//\n// Encryption — use AES-GCM:\n//   import "crypto/aes" + "crypto/cipher"\n//   block, _ := aes.NewCipher(key)\n//   gcm, _ := cipher.NewGCM(block)`,
 				Confidence:      0.90,
 				Category:        "crypto",
 				Severity:        f.Severity.String(),
@@ -276,9 +276,9 @@ func pathTraversalRule() FixRule {
 		},
 		Generator: func(f Finding) FixSuggestion {
 			return FixSuggestion{
-				Title:       "Sanitize file paths with filepath.Clean and base-path check",
-				Description: fmt.Sprintf("The code in %s:%d constructs a file path from user input without proper sanitization, enabling path traversal attacks. Use filepath.Clean to normalize the path and verify it stays within the intended base directory.", f.File, f.Line),
-				FixCode:     `// import "path/filepath"\n//\n// base := "/var/data/uploads"\n// cleaned := filepath.Clean(filepath.Join(base, userInput))\n// if !strings.HasPrefix(cleaned, base) {\n//     http.Error(w, "invalid path", http.StatusBadRequest)\n//     return\n// }`,
+				Title:           "Sanitize file paths with filepath.Clean and base-path check",
+				Description:     fmt.Sprintf("The code in %s:%d constructs a file path from user input without proper sanitization, enabling path traversal attacks. Use filepath.Clean to normalize the path and verify it stays within the intended base directory.", f.File, f.Line),
+				FixCode:         `// import "path/filepath"\n//\n// base := "/var/data/uploads"\n// cleaned := filepath.Clean(filepath.Join(base, userInput))\n// if !strings.HasPrefix(cleaned, base) {\n//     http.Error(w, "invalid path", http.StatusBadRequest)\n//     return\n// }`,
 				Confidence:      0.85,
 				Category:        "input-validation",
 				Severity:        f.Severity.String(),
@@ -301,9 +301,9 @@ func ssrfRule() FixRule {
 		},
 		Generator: func(f Finding) FixSuggestion {
 			return FixSuggestion{
-				Title:       "Validate outbound URLs against an allowlist",
-				Description: fmt.Sprintf("The code in %s:%d makes an HTTP request to a user-supplied URL, enabling server-side request forgery. Validate the URL against an allowlist of permitted hosts and schemes before issuing the request. Reject private IP ranges and localhost.", f.File, f.Line),
-				FixCode:     `// import "net/url"\n//\n// allowedHosts := map[string]bool{"api.example.com": true}\n// parsed, err := url.Parse(userURL)\n// if err != nil || !allowedHosts[parsed.Hostname()] {\n//     return fmt.Errorf("URL not allowed: %s", userURL)\n// }`,
+				Title:           "Validate outbound URLs against an allowlist",
+				Description:     fmt.Sprintf("The code in %s:%d makes an HTTP request to a user-supplied URL, enabling server-side request forgery. Validate the URL against an allowlist of permitted hosts and schemes before issuing the request. Reject private IP ranges and localhost.", f.File, f.Line),
+				FixCode:         `// import "net/url"\n//\n// allowedHosts := map[string]bool{"api.example.com": true}\n// parsed, err := url.Parse(userURL)\n// if err != nil || !allowedHosts[parsed.Hostname()] {\n//     return fmt.Errorf("URL not allowed: %s", userURL)\n// }`,
 				Confidence:      0.80,
 				Category:        "ssrf",
 				Severity:        f.Severity.String(),
