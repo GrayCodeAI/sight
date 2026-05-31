@@ -116,7 +116,7 @@ func TestEnrichContext_RespectsMaxContextTokenLimit(t *testing.T) {
 		recallFn: func(_ context.Context, _ string, _ int) ([]MemoryResult, error) {
 			return []MemoryResult{
 				{ID: "a", Content: "aaa", Score: 1.0},  // 3 chars, fits in 1 token budget (4 chars)
-				{ID: "b", Content: "bbbb", Score: 0.5},  // 4 chars
+				{ID: "b", Content: "bbbb", Score: 0.5}, // 4 chars
 			}, nil
 		},
 	}
