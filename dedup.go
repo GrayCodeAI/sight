@@ -8,14 +8,14 @@ import (
 // DedupConfig controls how findings are deduplicated.
 type DedupConfig struct {
 	SameFileOnly        bool    // Only merge findings within the same file
-	MergeDistance        int     // Line distance threshold for merging nearby findings
+	MergeDistance       int     // Line distance threshold for merging nearby findings
 	SimilarityThreshold float64 // Jaccard similarity threshold (0-1) for treating findings as near-duplicates
 }
 
 // DedupResult contains the outcome of a deduplication pass.
 type DedupResult struct {
-	Unique     []Finding         // Findings that survived deduplication
-	Duplicates []DuplicateGroup  // Groups of findings that were merged
+	Unique     []Finding        // Findings that survived deduplication
+	Duplicates []DuplicateGroup // Groups of findings that were merged
 }
 
 // DuplicateGroup describes a set of findings collapsed into one representative.
@@ -29,7 +29,7 @@ type DuplicateGroup struct {
 func NewDedupConfig() DedupConfig {
 	return DedupConfig{
 		SameFileOnly:        false,
-		MergeDistance:        5,
+		MergeDistance:       5,
 		SimilarityThreshold: 0.8,
 	}
 }
