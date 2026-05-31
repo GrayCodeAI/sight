@@ -93,3 +93,40 @@ make cover       # Coverage report
 ## License
 
 MIT
+
+## New Features (Wave 1-4)
+
+### Confidence Scoring
+
+Every finding includes a numeric confidence score (0.0-1.0) indicating how certain the system is that it's a true positive. Higher scores = more reliable findings.
+
+### SAST-LLM Fusion
+
+Sight can ingest findings from static analysis tools (SAST) and feed them into the LLM review prompt for validation. This combines the breadth of automated scanning with the depth of LLM reasoning.
+
+### Fix Suggestion Pipeline
+
+Sight includes a built-in fix suggestion pipeline that generates remediation code for common vulnerability patterns:
+- SQL injection → parameterized queries
+- XSS → HTML escaping / template engines
+- Hardcoded secrets → environment variables
+- Missing input validation → validation middleware
+- Weak crypto → modern algorithm replacement
+- Path traversal → filepath.Clean + base path checks
+- SSRF → URL allowlist validation
+
+Custom rules can be registered via AddRule().
+
+### Memory Bridge (Coming Soon)
+
+Integration with yaad memory for context-aware reviews. Sight can recall similar past findings and store review results for future reference.
+
+## Ecosystem
+
+Sight is part of the hawk-eco platform:
+- **hawk** — CLI/REPL that orchestrates all tools
+- **eyrie** — LLM provider layer (sight calls LLMs through eyrie)
+- **yaad** — memory/recall engine
+- **inspect** — security/accessibility auditing
+- **tok** — token counting and cost estimation
+- **trace** — session capture and replay
