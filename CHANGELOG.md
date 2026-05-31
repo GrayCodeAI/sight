@@ -20,6 +20,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     field; it identifies the SARIF format, not the tool)
   - `internal/output/sarif.go`: same fix in the duplicated SARIF code
 
+### Added
+- Numeric confidence scoring (0.0-1.0) on every finding
+- SAST-LLM fusion for combining static analysis with LLM review
+- Fix suggestion pipeline with 7 built-in remediation rules
+- Memory bridge for yaad integration (context-aware reviews)
+
 ### Added — Production hygiene (top-50 OSS parity)
 - `CODE_OF_CONDUCT.md` — Contributor Covenant 2.1.
 - `.gitattributes` — LF normalization, binary detection, GitHub
