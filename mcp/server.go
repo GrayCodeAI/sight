@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	mcplib "github.com/mark3labs/mcp-go/mcp"
 	mcpserver "github.com/mark3labs/mcp-go/server"
@@ -40,6 +41,13 @@ func (s *Server) ServeStdio() error {
 	return stdio.Listen(context.Background(), os.Stdin, os.Stdout)
 }
 
+// ServeHTTP starts the MCP server on a streamable HTTP endpoint. Clients
+// connect to http://<addr>/mcp.
+func (s *Server) ServeHTTP(addr string) error {
+	httpServer := mcpserver.NewStreamableHTTPServer(s.server)
+	return httpServer.Start(addr)
+}
+
 func (s *Server) registerTools() {
 	s.server.AddTool(mcplib.NewTool(
 		"sight_review",
@@ -58,6 +66,40 @@ func (s *Server) registerTools() {
 		mcplib.WithDescription("Suggest code improvements (non-bug focused)"),
 		mcplib.WithString("diff", mcplib.Required(), mcplib.Description("Unified diff text")),
 	), s.handleImprove)
+
+	s.server.AddTool(mcplib.NewTool(
+		"sight_taint",
+		mcplib.WithDescription("Run SSA-based cross-function taint analysis on Go packages and return security findings (no LLM required)"),
+		mcplib.WithString("path", mcplib.Required(), mcplib.Description("Filesystem path to the module/directory to analyze")),
+		mcplib.WithString("patterns", mcplib.Description("Comma-separated go package patterns to load (default \"./...\")")),
+	), s.handleTaint)
+}
+
+func (s *Server) handleTaint(ctx context.Context, req mcplib.CallToolRequest) (*mcplib.CallToolResult, error) {
+	path := strArg(req, "path")
+	if path == "" {
+		return mcplib.NewToolResultError("path is required"), nil
+	}
+	var patterns []string
+	if p := strArg(req, "patterns"); p != "" {
+		for _, part := range strings.Split(p, ",") {
+			if part = strings.TrimSpace(part); part != "" {
+				patterns = append(patterns, part)
+			}
+		}
+	}
+
+	analyzer := sight.NewSSATaintAnalyzer()
+	findings, err := analyzer.AnalyzePackages(path, patterns...)
+	if err != nil {
+		return mcplib.NewToolResultError(fmt.Sprintf("taint analysis failed: %v", err)), nil
+	}
+
+	b, err := json.MarshalIndent(findings, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return mcplib.NewToolResultText(string(b)), nil
 }
 
 func (s *Server) handleReview(ctx context.Context, req mcplib.CallToolRequest) (*mcplib.CallToolResult, error) {
