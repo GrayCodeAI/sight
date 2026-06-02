@@ -1,132 +1,60 @@
-# sight
+<p align="center">
+  <h1 align="center">Sight</h1>
+  <p align="center">
+    <strong>AI-powered code review for diffs</strong>
+  </p>
+  <p align="center">
+    <a href="https://golang.org/"><img src="https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
+    <a href="https://github.com/GrayCodeAI/sight/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/GrayCodeAI/sight/ci.yml?style=flat-square&label=tests" alt="CI"></a>
+  </p>
+</p>
 
-AI-powered code review on diffs. Parses unified diffs, enriches with surrounding code context and git history, then runs parallel multi-concern reviews through an LLM provider.
+---
 
-## Design
+Sight provides intelligent code review capabilities by analyzing diffs with AI. It understands context, identifies issues, and suggests improvements.
 
-- **Library only** — no CLI, no binary
-- **No LLM SDK dependency** — defines a Provider interface; consumers implement it
-- **No opinions** — consumers inject their own LLM client (e.g., via eyrie)
+## Features
 
-## Install
+- **Diff-aware analysis** - Reviews only changed code with full context
+- **Severity classification** - Categorizes findings by impact
+- **Provider agnostic** - Works with any LLM provider through the `Provider` interface
+- **Extensible rules** - Add custom review rules for your codebase
+
+## Quick Start
 
 ```bash
-go get github.com/GrayCodeAI/sight@latest
+go get github.com/GrayCodeAI/sight
 ```
 
-## Usage
-
-### One-shot review
-
 ```go
-result, err := sight.Review(ctx, diffText,
-    sight.WithProvider(myProvider),
+import "github.com/GrayCodeAI/sight"
+
+reviewer := sight.NewReviewer(
+    sight.WithProvider(myLLMProvider),
     sight.Thorough,
 )
+
+result, err := reviewer.Review(ctx, diff)
 for _, f := range result.Findings {
     fmt.Printf("[%s] %s:%d - %s\n", f.Severity, f.File, f.Line, f.Message)
 }
 ```
 
-### Reusable reviewer
+## Examples
 
-```go
-r := sight.NewReviewer(sight.WithProvider(p), sight.Thorough)
-result1, _ := r.Review(ctx, diff1)
-result2, _ := r.Review(ctx, diff2)
-```
+See the [examples/](examples/) directory for runnable code samples.
 
-### Provider interface
+## Provider Interface
 
-Implement this with any LLM client:
+Implement the `Provider` interface to use any LLM:
 
 ```go
 type Provider interface {
-    Complete(ctx context.Context, messages []Message) (string, error)
+    Chat(ctx context.Context, messages []Message, opts ChatOpts) (*Response, error)
 }
-```
-
-## Presets
-
-| Preset | Concerns | Use case |
-|--------|----------|----------|
-| Quick | security, correctness | Fast PR checks |
-| Standard | all (default) | Balanced review |
-| Thorough | all + deeper analysis | Critical code |
-| SecurityFocus | security only | Security audit |
-| CI | all + fail-on threshold | CI/CD gates |
-
-## Findings
-
-Each finding includes:
-- **Concern**: security, performance, correctness, maintainability, testing
-- **Severity**: critical, high, medium, low, info
-- **File** and **Line**: exact location in diff
-- **Message**: human-readable description
-- **Fix**: suggested code fix
-- **CWE**: reference (e.g., CWE-79)
-
-## Output Formats
-
-- Inline comments (GitHub/GitLab PR comments)
-- Human-readable terminal output
-
-## Configuration
-
-File-based config via `.sight.toml`:
-
-```toml
-fail-on = "high"
-exclude = ["vendor/", "generated/"]
-concerns = ["security", "performance", "correctness"]
-```
-
-## Testing
-
-```bash
-make test        # Unit tests
-make test-race   # With race detector
-make bench       # Benchmarks
-make cover       # Coverage report
 ```
 
 ## License
 
-MIT
-
-## New Features (Wave 1-4)
-
-### Confidence Scoring
-
-Every finding includes a numeric confidence score (0.0-1.0) indicating how certain the system is that it's a true positive. Higher scores = more reliable findings.
-
-### SAST-LLM Fusion
-
-Sight can ingest findings from static analysis tools (SAST) and feed them into the LLM review prompt for validation. This combines the breadth of automated scanning with the depth of LLM reasoning.
-
-### Fix Suggestion Pipeline
-
-Sight includes a built-in fix suggestion pipeline that generates remediation code for common vulnerability patterns:
-- SQL injection → parameterized queries
-- XSS → HTML escaping / template engines
-- Hardcoded secrets → environment variables
-- Missing input validation → validation middleware
-- Weak crypto → modern algorithm replacement
-- Path traversal → filepath.Clean + base path checks
-- SSRF → URL allowlist validation
-
-Custom rules can be registered via AddRule().
-
-### Memory Bridge (Coming Soon)
-
-Integration with yaad memory for context-aware reviews. Sight can recall similar past findings and store review results for future reference.
-
-## Ecosystem
-
-Sight is part of the hawk-eco platform:
-- **hawk** — CLI/REPL that orchestrates all tools
-- **eyrie** — LLM provider layer (sight calls LLMs through eyrie)
-- **yaad** — memory/recall engine
-- **inspect** — security/accessibility auditing
-- **tok** — token counting and cost estimation
-- **trace** — session capture and replay
+MIT - see [LICENSE](LICENSE) for details.
