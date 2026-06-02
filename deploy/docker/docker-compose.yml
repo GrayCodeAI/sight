@@ -1,0 +1,12 @@
+name: sight
+
+services:
+  sight:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    image: ghcr.io/graycodeai/sight:dev
+    env_file:
+      - path: ../../.env.example
+        required: false
+    command: ["mcp"]

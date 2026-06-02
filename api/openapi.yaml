@@ -1,0 +1,95 @@
+openapi: "3.1.0"
+info:
+  title: sight — Code Review Tool Reference
+  description: |
+    sight is an AI-powered code review library for diffs.
+    It parses unified diffs, enriches with code context and git history,
+    and runs parallel multi-concern reviews through an LLM provider.
+
+    sight operates as a Go library and MCP server (stdio or HTTP).
+    This document describes the MCP tool surface as a machine-readable reference.
+  version: "0.1.0"
+  license:
+    name: MIT
+    url: https://github.com/GrayCodeAI/sight/blob/main/LICENSE
+  contact:
+    url: https://github.com/GrayCodeAI/sight
+
+# No HTTP server by default — MCP uses stdio transport.
+# HTTP transport is available via: sight mcp --transport http --addr 127.0.0.1:8080
+
+tags:
+  - name: review
+    description: Code review tools
+  - name: taint
+    description: Security taint analysis
+
+x-mcp-server:
+  transport: stdio
+  binary: sight
+  start_command: ["sight", "mcp"]
+  http_transport_command: ["sight", "mcp", "--transport", "http", "--addr", "127.0.0.1:8080"]
+
+x-mcp-tools:
+  sight_review:
+    description: AI code review on a unified diff — security, correctness, style, performance
+    inputSchema:
+      type: object
+      required: [diff]
+      properties:
+        diff:
+          type: string
+          description: Unified diff text (output of `git diff`)
+        preset:
+          type: string
+          enum: [Quick, Standard, Thorough, SecurityFocus, CI]
+          default: Standard
+          description: Review thoroughness preset
+        exclude_files:
+          type: array
+          items:
+            type: string
+          description: File patterns to exclude from review (glob)
+        max_tokens:
+          type: integer
+          description: Maximum tokens for the LLM review
+
+  sight_describe:
+    description: Generate a pull request description from a unified diff
+    inputSchema:
+      type: object
+      required: [diff]
+      properties:
+        diff:
+          type: string
+          description: Unified diff text
+
+  sight_improve:
+    description: Suggest specific code improvements for a diff
+    inputSchema:
+      type: object
+      required: [diff]
+      properties:
+        diff:
+          type: string
+        focus:
+          type: string
+          description: Focus area for improvements (e.g. "performance", "readability")
+
+  sight_taint:
+    description: SSA-based cross-function taint analysis for security vulnerabilities
+    inputSchema:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+          description: Absolute path to the Go package or module root
+        patterns:
+          type: string
+          default: "./..."
+          description: Go package patterns to analyze
+        json:
+          type: boolean
+          default: false
+          description: Output results as JSON
