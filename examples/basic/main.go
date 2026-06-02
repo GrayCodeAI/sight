@@ -10,8 +10,10 @@ import (
 
 type mockProvider struct{}
 
-func (m *mockProvider) Complete(ctx context.Context, messages []sight.Message) (string, error) {
-	return "Code looks good. Consider adding error handling for edge cases.", nil
+func (m *mockProvider) Chat(ctx context.Context, messages []sight.Message, opts sight.ChatOpts) (*sight.Response, error) {
+	return &sight.Response{
+		Content: "Code looks good. Consider adding error handling for edge cases.",
+	}, nil
 }
 
 func main() {
