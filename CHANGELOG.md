@@ -10,12 +10,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Changed
-- **Version re-baselined to `0.2.0`** across the MCP server advertisement
+- **Version re-baselined to `0.1.0`** across the MCP server advertisement
   and both SARIF driver-version sites. Aligns sight with the rest of
   the hawk-eco ecosystem (`hawk`, `tok`, `eyrie`, `yaad`, `trace`,
   `inspect`).
-  - `mcp/server.go`: `mcpserver.NewMCPServer("sight", "0.2.0", ...)`
-  - `sarif.go`: `Driver.Version`/`Driver.SemanticVersion` → `"0.2.0"`
+  - `mcp/server.go`: `mcpserver.NewMCPServer("sight", "0.1.0", ...)`
+  - `sarif.go`: `Driver.Version`/`Driver.SemanticVersion` → `"0.1.0"`
     (the SARIF spec version remains `"2.1.0"` — that's a different
     field; it identifies the SARIF format, not the tool)
   - `internal/output/sarif.go`: same fix in the duplicated SARIF code
@@ -64,7 +64,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
-## [0.2.0] — 2026-04-30
+## [0.1.0] — 2026-04-30
 
 ### Added
 - Describe operation (PR description generation)
