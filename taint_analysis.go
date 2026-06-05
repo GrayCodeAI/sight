@@ -288,9 +288,6 @@ var assignPattern = regexp.MustCompile(`^\s*(?:(?:var|const)\s+)?(\w+)\s*(?::=|=
 // shortAssignPattern matches short declarations: x := something
 var shortAssignPattern = regexp.MustCompile(`^\s*(\w+)\s*:=\s*(.+)$`)
 
-// concatPattern detects string concatenation with +
-var concatOp = "+"
-
 func (ta *TaintAnalyzer) analyzeFileBlock(filePath string, lines []diffLineInfo) []TaintFinding {
 	var findings []TaintFinding
 
