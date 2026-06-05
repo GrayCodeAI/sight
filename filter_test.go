@@ -247,7 +247,6 @@ type concurrencyTracker struct {
 	maxConcurrent  *int32
 	curConcurrent  *int32
 	simulatedDelay time.Duration
-	mu             sync.Mutex
 }
 
 func (c *concurrencyTracker) Chat(ctx context.Context, messages []sight.Message, opts sight.ChatOpts) (*sight.Response, error) {
