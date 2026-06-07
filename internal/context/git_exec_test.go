@@ -32,7 +32,8 @@ func gitRepo(t *testing.T) func(msg string) {
 		t.Helper()
 		cmd := exec.Command("git", args...)
 		// Keep config local + deterministic regardless of the host's git config.
-		cmd.Env = append(os.Environ(),
+		cmd.Env = append(
+			os.Environ(),
 			"GIT_AUTHOR_NAME=Tester", "GIT_AUTHOR_EMAIL=tester@example.com",
 			"GIT_COMMITTER_NAME=Tester", "GIT_COMMITTER_EMAIL=tester@example.com",
 			"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
