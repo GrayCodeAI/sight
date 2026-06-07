@@ -55,6 +55,18 @@ type Provider interface {
 }
 ```
 
+## Installation
+
+```bash
+go get github.com/GrayCodeAI/sight@latest
+```
+
+Requires Go 1.23+.
+
+## Contributing
+
+Contributions are welcome — please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+
 ## License
 
 MIT - see [LICENSE](LICENSE) for details.
