@@ -79,11 +79,12 @@ func buildDescribePrompt(files []diff.File, maxTokens int) string {
 
 	for _, f := range files {
 		prefix := ""
-		if f.Added {
+		switch {
+		case f.Added:
 			prefix = " (new)"
-		} else if f.Deleted {
+		case f.Deleted:
 			prefix = " (deleted)"
-		} else if f.Renamed {
+		case f.Renamed:
 			prefix = " (renamed from " + f.OldPath + ")"
 		}
 		b.WriteString("- " + f.Path + prefix + "\n")

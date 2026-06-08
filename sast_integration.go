@@ -72,10 +72,10 @@ func (s *SASTIntegration) BuildReviewPrompt(sastFindings []SASTFinding, diff str
 	if len(sastFindings) == 0 {
 		prompt.WriteString("No SAST findings detected. Focus on code quality and logic.\n\n")
 	} else {
-		prompt.WriteString(fmt.Sprintf("Found %d potential issues:\n\n", len(sastFindings)))
+		fmt.Fprintf(&prompt, "Found %d potential issues:\n\n", len(sastFindings))
 		for _, f := range sastFindings {
-			prompt.WriteString(fmt.Sprintf("- **%s** [%s] in %s:%d\n  %s\n  Evidence: `%s`\n\n",
-				f.Rule, f.Severity, f.File, f.Line, f.Message, truncate(f.Evidence, 100)))
+			fmt.Fprintf(&prompt, "- **%s** [%s] in %s:%d\n  %s\n  Evidence: `%s`\n\n",
+				f.Rule, f.Severity, f.File, f.Line, f.Message, truncate(f.Evidence, 100))
 		}
 	}
 

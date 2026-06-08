@@ -3,10 +3,53 @@ version: "2"
 linters:
   default: none
   enable:
+    - errcheck
     - govet
     - ineffassign
-    - nilerr
+    - staticcheck
+    - unused
     - misspell
+    - gocritic
+    - unconvert
+    - whitespace
+    - bodyclose
+    - noctx
+    - nilerr
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+        - appendAssign
+        # appendCombine hurts readability when each appended item is a
+        # documented struct literal (see registerBuiltinChecks).
+        - appendCombine
+    staticcheck:
+      # QF1001 (De Morgan's law) is disabled: !(a || b) reads more clearly
+      # than the rewritten !a && !b in this codebase.
+      checks: ["all", "-SA1019", "-ST1003", "-QF1001"]
+  exclusions:
+    presets:
+      - comments
+      - std-error-handling
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gocritic
+          - noctx
+          - bodyclose
+      # git.go shells out to short-lived local `git` commands; threading a
+      # context through these helpers adds no practical cancellation value.
+      - path: internal/context/git\.go
+        linters:
+          - noctx
 
 issues:
   max-issues-per-linter: 0
