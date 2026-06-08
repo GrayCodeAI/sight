@@ -182,7 +182,7 @@ func parseFrontmatter(check *CustomCheck, fm string) {
 				}
 			}
 		case "enabled":
-			check.Enabled = strings.ToLower(value) != "false"
+			check.Enabled = !strings.EqualFold(value, "false")
 		}
 	}
 }

@@ -55,9 +55,9 @@ func BuildPrompt(concern Concern, files []diff.File, contextLines int) string {
 		if len(file.Hunks) == 0 && !file.Added && !file.Renamed {
 			continue
 		}
-		b.WriteString(fmt.Sprintf("## File: %s\n", file.Path))
+		fmt.Fprintf(&b, "## File: %s\n", file.Path)
 		if file.Renamed {
-			b.WriteString(fmt.Sprintf("(renamed from %s)\n", file.OldPath))
+			fmt.Fprintf(&b, "(renamed from %s)\n", file.OldPath)
 		}
 		if file.Added {
 			b.WriteString("(new file)\n")
@@ -65,19 +65,19 @@ func BuildPrompt(concern Concern, files []diff.File, contextLines int) string {
 		b.WriteString("\n```diff\n")
 
 		for _, hunk := range file.Hunks {
-			b.WriteString(fmt.Sprintf("@@ -%d,%d +%d,%d @@ %s\n",
+			fmt.Fprintf(&b, "@@ -%d,%d +%d,%d @@ %s\n",
 				hunk.OldStart, hunk.OldCount,
 				hunk.NewStart, hunk.NewCount,
-				hunk.Header))
+				hunk.Header)
 
 			for _, line := range hunk.Lines {
 				switch line.Type {
 				case diff.LineAdded:
-					b.WriteString(fmt.Sprintf("+%s\n", line.Content))
+					fmt.Fprintf(&b, "+%s\n", line.Content)
 				case diff.LineRemoved:
-					b.WriteString(fmt.Sprintf("-%s\n", line.Content))
+					fmt.Fprintf(&b, "-%s\n", line.Content)
 				case diff.LineContext:
-					b.WriteString(fmt.Sprintf(" %s\n", line.Content))
+					fmt.Fprintf(&b, " %s\n", line.Content)
 				}
 			}
 		}
@@ -86,7 +86,7 @@ func BuildPrompt(concern Concern, files []diff.File, contextLines int) string {
 	}
 
 	b.WriteString("</diff_content>\n\n")
-	b.WriteString(fmt.Sprintf("Focus on: %s\n", concern.Name))
+	fmt.Fprintf(&b, "Focus on: %s\n", concern.Name)
 	b.WriteString("Respond with a JSON array of findings.\n")
 
 	return b.String()
@@ -163,13 +163,13 @@ func detectLanguages(files []diff.File) string {
 
 	var b strings.Builder
 	b.WriteString("## Context\n")
-	b.WriteString(fmt.Sprintf("Primary language: %s\n", primaryLang))
+	fmt.Fprintf(&b, "Primary language: %s\n", primaryLang)
 	b.WriteString("Files: ")
 	for i, e := range entries {
 		if i > 0 {
 			b.WriteString(", ")
 		}
-		b.WriteString(fmt.Sprintf("%d %s", e.count, e.ext))
+		fmt.Fprintf(&b, "%d %s", e.count, e.ext)
 	}
 	b.WriteString("\n")
 	return b.String()
@@ -198,9 +198,9 @@ func BuildPromptEnhanced(concern Concern, files []diff.File, contextLines int) s
 		if len(file.Hunks) == 0 && !file.Added && !file.Renamed {
 			continue
 		}
-		b.WriteString(fmt.Sprintf("## File: %s\n", file.Path))
+		fmt.Fprintf(&b, "## File: %s\n", file.Path)
 		if file.Renamed {
-			b.WriteString(fmt.Sprintf("(renamed from %s)\n", file.OldPath))
+			fmt.Fprintf(&b, "(renamed from %s)\n", file.OldPath)
 		}
 		if file.Added {
 			b.WriteString("(new file)\n")
@@ -208,19 +208,19 @@ func BuildPromptEnhanced(concern Concern, files []diff.File, contextLines int) s
 		b.WriteString("\n")
 
 		for _, hunk := range file.Hunks {
-			b.WriteString(fmt.Sprintf("@@ -%d,%d +%d,%d @@ %s\n\n",
+			fmt.Fprintf(&b, "@@ -%d,%d +%d,%d @@ %s\n\n",
 				hunk.OldStart, hunk.OldCount,
 				hunk.NewStart, hunk.NewCount,
-				hunk.Header))
+				hunk.Header)
 
 			// __new hunk__ section: added lines and context lines with new-file line numbers
 			b.WriteString("__new hunk__\n")
 			for _, line := range hunk.Lines {
 				switch line.Type {
 				case diff.LineAdded:
-					b.WriteString(fmt.Sprintf("%d +%s\n", line.NewNum, line.Content))
+					fmt.Fprintf(&b, "%d +%s\n", line.NewNum, line.Content)
 				case diff.LineContext:
-					b.WriteString(fmt.Sprintf("%d  %s\n", line.NewNum, line.Content))
+					fmt.Fprintf(&b, "%d  %s\n", line.NewNum, line.Content)
 				}
 			}
 			b.WriteString("\n")
@@ -230,9 +230,9 @@ func BuildPromptEnhanced(concern Concern, files []diff.File, contextLines int) s
 			for _, line := range hunk.Lines {
 				switch line.Type {
 				case diff.LineRemoved:
-					b.WriteString(fmt.Sprintf("%d -%s\n", line.OldNum, line.Content))
+					fmt.Fprintf(&b, "%d -%s\n", line.OldNum, line.Content)
 				case diff.LineContext:
-					b.WriteString(fmt.Sprintf("%d  %s\n", line.OldNum, line.Content))
+					fmt.Fprintf(&b, "%d  %s\n", line.OldNum, line.Content)
 				}
 			}
 			b.WriteString("\n")
@@ -240,7 +240,7 @@ func BuildPromptEnhanced(concern Concern, files []diff.File, contextLines int) s
 	}
 
 	b.WriteString("</diff_content>\n\n")
-	b.WriteString(fmt.Sprintf("Focus on: %s\n", concern.Name))
+	fmt.Fprintf(&b, "Focus on: %s\n", concern.Name)
 	b.WriteString("Respond with a JSON array of findings.\n")
 
 	return b.String()

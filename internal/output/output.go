@@ -50,9 +50,9 @@ func FormatTerminal(findings []Finding, stats Stats) string {
 	b.WriteString("\n")
 	b.WriteString(bold + "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" + reset + "\n")
 	b.WriteString(bold + "  SIGHT CODE REVIEW" + reset + "\n")
-	b.WriteString(fmt.Sprintf("  %d files, %d hunks analyzed", stats.FilesReviewed, stats.HunksAnalyzed))
+	fmt.Fprintf(&b, "  %d files, %d hunks analyzed", stats.FilesReviewed, stats.HunksAnalyzed)
 	if stats.TokensUsed > 0 {
-		b.WriteString(fmt.Sprintf(" (%d tokens used)", stats.TokensUsed))
+		fmt.Fprintf(&b, " (%d tokens used)", stats.TokensUsed)
 	}
 	b.WriteString("\n")
 	b.WriteString(bold + "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" + reset + "\n\n")
@@ -82,7 +82,7 @@ func FormatTerminal(findings []Finding, stats Stats) string {
 			name = severityNames[sev]
 		}
 
-		b.WriteString(fmt.Sprintf("  %s%s%s (%d)\n\n", color+bold, name, reset, len(items)))
+		fmt.Fprintf(&b, "  %s%s%s (%d)\n\n", color+bold, name, reset, len(items))
 
 		for _, f := range items {
 			loc := f.File
@@ -93,25 +93,25 @@ func FormatTerminal(findings []Finding, stats Stats) string {
 				}
 			}
 
-			b.WriteString(fmt.Sprintf("    %s%s%s %s\n", color, "●", reset, f.Message))
-			b.WriteString(fmt.Sprintf("      %s%s%s", dim, loc, reset))
+			fmt.Fprintf(&b, "    %s%s%s %s\n", color, "●", reset, f.Message)
+			fmt.Fprintf(&b, "      %s%s%s", dim, loc, reset)
 			if f.Concern != "" {
-				b.WriteString(fmt.Sprintf("  %s[%s]%s", dim, f.Concern, reset))
+				fmt.Fprintf(&b, "  %s[%s]%s", dim, f.Concern, reset)
 			}
 			b.WriteString("\n")
 
 			if f.Reasoning != "" {
-				b.WriteString(fmt.Sprintf("      %s▸ %s%s\n", dim, f.Reasoning, reset))
+				fmt.Fprintf(&b, "      %s▸ %s%s\n", dim, f.Reasoning, reset)
 			}
 			if f.Fix != "" {
-				b.WriteString(fmt.Sprintf("      %s⚡ Fix: %s%s\n", "\033[32m", f.Fix, reset))
+				fmt.Fprintf(&b, "      %s⚡ Fix: %s%s\n", "\033[32m", f.Fix, reset)
 			}
 			b.WriteString("\n")
 		}
 	}
 
 	b.WriteString(bold + "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" + reset + "\n")
-	b.WriteString(fmt.Sprintf("  SUMMARY: %d findings", len(findings)))
+	fmt.Fprintf(&b, "  SUMMARY: %d findings", len(findings))
 
 	parts := []string{}
 	for _, sev := range order {
@@ -131,7 +131,7 @@ func FormatTerminal(findings []Finding, stats Stats) string {
 		for name, d := range stats.DurationPerConcern {
 			dParts = append(dParts, fmt.Sprintf("%s:%s", name, d.Round(time.Millisecond)))
 		}
-		b.WriteString(fmt.Sprintf("  %sTiming: %s%s\n", dim, strings.Join(dParts, " | "), reset))
+		fmt.Fprintf(&b, "  %sTiming: %s%s\n", dim, strings.Join(dParts, " | "), reset)
 	}
 	b.WriteString(bold + "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" + reset + "\n")
 
@@ -309,7 +309,7 @@ func FormatGitHubReview(findings []Finding) string {
 	}
 
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("## Sight Review — %d findings\n\n", len(findings)))
+	fmt.Fprintf(&b, "## Sight Review — %d findings\n\n", len(findings))
 
 	for _, f := range findings {
 		sev := "INFO"
@@ -320,9 +320,9 @@ func FormatGitHubReview(findings []Finding) string {
 		if f.Line > 0 {
 			loc = fmt.Sprintf("%s:%d", f.File, f.Line)
 		}
-		b.WriteString(fmt.Sprintf("- **[%s]** `%s` — %s\n", sev, loc, f.Message))
+		fmt.Fprintf(&b, "- **[%s]** `%s` — %s\n", sev, loc, f.Message)
 		if f.Fix != "" {
-			b.WriteString(fmt.Sprintf("  - Fix: %s\n", f.Fix))
+			fmt.Fprintf(&b, "  - Fix: %s\n", f.Fix)
 		}
 	}
 

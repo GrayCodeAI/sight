@@ -160,7 +160,7 @@ func TestExtractRelevantDiff_LineWindowExtraction(t *testing.T) {
 	b.WriteString("diff --git a/big.go b/big.go\n--- a/big.go\n+++ b/big.go\n")
 	b.WriteString("@@ -1,20 +1,20 @@\n")
 	for i := 1; i <= 20; i++ {
-		b.WriteString(fmt.Sprintf(" line %d context\n", i))
+		fmt.Fprintf(&b, " line %d context\n", i)
 	}
 	b.WriteString("+added line\n")
 
@@ -189,7 +189,7 @@ func TestExtractRelevantDiff_Truncation(t *testing.T) {
 	b.WriteString("diff --git a/big.go b/big.go\n--- a/big.go\n+++ b/big.go\n")
 	b.WriteString("@@ -1,50 +1,50 @@\n")
 	for i := 1; i <= 50; i++ {
-		b.WriteString(fmt.Sprintf(" this is a long context line number %d with extra padding text to make it longer\n", i))
+		fmt.Fprintf(&b, " this is a long context line number %d with extra padding text to make it longer\n", i)
 	}
 
 	result := extractRelevantDiff(b.String(), "big.go", 25)

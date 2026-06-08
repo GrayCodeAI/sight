@@ -32,8 +32,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   linguist hints (collapse `go.sum` in PR diffs).
 - `.editorconfig` — UTF-8, LF, final newline, trim trailing whitespace,
   tabs for Go, 2-space indent for YAML/JSON/TOML.
-- `.github/dependabot.yml` — weekly `gomod` and `github-actions`
-  updates.
 - `.github/PULL_REQUEST_TEMPLATE.md` — Summary / Changes / Review-
   quality impact (eval-set numbers) / Testing / Checklist.
 - `.github/ISSUE_TEMPLATE/bug_report.yml` — structured bug report

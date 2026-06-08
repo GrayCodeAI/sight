@@ -138,10 +138,7 @@ REASONING: brief explanation`, f.Concern, f.Severity, f.File, f.Line, f.Message,
 func parseFilterResponse(f Finding, response string) FilterResult {
 	lower := strings.ToLower(response)
 
-	confirmed := true
-	if strings.Contains(lower, "confirmed: no") || strings.Contains(lower, "false positive") {
-		confirmed = false
-	}
+	confirmed := !(strings.Contains(lower, "confirmed: no") || strings.Contains(lower, "false positive"))
 
 	confidence := 0.7
 	if idx := strings.Index(lower, "confidence:"); idx >= 0 {

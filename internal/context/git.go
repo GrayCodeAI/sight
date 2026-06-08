@@ -60,12 +60,12 @@ func FormatContext(contexts []FileContext) string {
 		if len(fc.RecentCommits) == 0 {
 			continue
 		}
-		b.WriteString(fmt.Sprintf("### %s — Recent changes:\n", fc.Path))
+		fmt.Fprintf(&b, "### %s — Recent changes:\n", fc.Path)
 		for _, c := range fc.RecentCommits {
-			b.WriteString(fmt.Sprintf("  - %s\n", c))
+			fmt.Fprintf(&b, "  - %s\n", c)
 		}
 		if fc.BlameSnippet != "" {
-			b.WriteString(fmt.Sprintf("  Blame: %s\n", fc.BlameSnippet))
+			fmt.Fprintf(&b, "  Blame: %s\n", fc.BlameSnippet)
 		}
 		b.WriteString("\n")
 	}
