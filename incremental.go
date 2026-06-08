@@ -157,9 +157,9 @@ func enrichDiffWithContext(ctx context.Context, diffText string, contextLines in
 			// Add surrounding context before the hunk
 			contextBefore := loadFileLines(ctx, currentFile, startLine-contextLines, startLine-1)
 			if len(contextBefore) > 0 {
-				enriched.WriteString(fmt.Sprintf("\n--- Context before (lines %d-%d) ---\n", startLine-contextLines, startLine-1))
+				fmt.Fprintf(&enriched, "\n--- Context before (lines %d-%d) ---\n", startLine-contextLines, startLine-1)
 				for i, cl := range contextBefore {
-					enriched.WriteString(fmt.Sprintf("  %d | %s\n", startLine-contextLines+i, cl))
+					fmt.Fprintf(&enriched, "  %d | %s\n", startLine-contextLines+i, cl)
 				}
 			}
 

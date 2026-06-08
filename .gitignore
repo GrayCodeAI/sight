@@ -8,3 +8,6 @@
 .claude/
 .codegraph/
 coverage.out
+
+# macOS
+.DS_Store

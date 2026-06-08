@@ -56,10 +56,10 @@ func BuildReflectPrompt(findings []Finding, diffContext string) string {
 	b.WriteString("## Findings to validate:\n\n")
 
 	for i, f := range findings {
-		b.WriteString(fmt.Sprintf("%d. [%s][%s] %s:%d — %s\n",
-			i, severityStr(f.Severity), f.Concern, f.File, f.Line, f.Message))
+		fmt.Fprintf(&b, "%d. [%s][%s] %s:%d — %s\n",
+			i, severityStr(f.Severity), f.Concern, f.File, f.Line, f.Message)
 		if f.Fix != "" {
-			b.WriteString(fmt.Sprintf("   Fix: %s\n", f.Fix))
+			fmt.Fprintf(&b, "   Fix: %s\n", f.Fix)
 		}
 	}
 

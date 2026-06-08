@@ -192,11 +192,7 @@ func buildReason(rep Finding, dupes []Finding, config DedupConfig) string {
 		parts = append(parts, "same file")
 	}
 
-	if len(dupes) == 1 {
-		parts = append(parts, "similar concern/message text")
-	} else {
-		parts = append(parts, "similar concern/message text")
-	}
+	parts = append(parts, "similar concern/message text")
 
 	if rep.File != "" && len(dupes) > 0 && dupes[0].File == rep.File {
 		parts = append(parts, "within line distance threshold")

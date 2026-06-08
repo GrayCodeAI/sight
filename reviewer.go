@@ -378,7 +378,7 @@ func toPublicFindings(internal []review.Finding) []Finding {
 		}
 		out[i] = Finding{
 			Concern:    f.Concern,
-			Severity:   Severity(f.Severity),
+			Severity:   f.Severity,
 			File:       f.File,
 			Line:       f.Line,
 			EndLine:    f.EndLine,
@@ -530,7 +530,7 @@ func (r *Reviewer) reflect(ctx context.Context, findings []Finding, rawDiff stri
 	for i, f := range findings {
 		internalFindings[i] = review.Finding{
 			Concern:    f.Concern,
-			Severity:   review.Severity(f.Severity),
+			Severity:   f.Severity,
 			File:       f.File,
 			Line:       f.Line,
 			EndLine:    f.EndLine,

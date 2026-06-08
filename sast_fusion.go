@@ -50,7 +50,7 @@ func (sf *SASTFusion) FormatSASTForPrompt(findings []Finding) string {
 	b.WriteString("2. DISMISS it if it is a false positive or not actionable.\n")
 	b.WriteString("If you validate a finding, include it in your response with the original finding's details. ")
 	b.WriteString("If you dismiss it, include it in your response with action \"dismiss\" and explain why.\n\n")
-	b.WriteString(fmt.Sprintf("Found %d potential issues:\n\n", len(findings)))
+	fmt.Fprintf(&b, "Found %d potential issues:\n\n", len(findings))
 
 	for i := 0; i < limit; i++ {
 		f := findings[i]
@@ -67,20 +67,20 @@ func (sf *SASTFusion) FormatSASTForPrompt(findings []Finding) string {
 		if sf.MaxEvidenceLen > 0 && len(msg) > sf.MaxEvidenceLen {
 			msg = msg[:sf.MaxEvidenceLen] + "..."
 		}
-		b.WriteString(fmt.Sprintf("- [%s] %s (%s)\n", severity, msg, f.Concern))
-		b.WriteString(fmt.Sprintf("  Location: %s\n", loc))
+		fmt.Fprintf(&b, "- [%s] %s (%s)\n", severity, msg, f.Concern)
+		fmt.Fprintf(&b, "  Location: %s\n", loc)
 		if f.Fix != "" {
 			fix := f.Fix
 			if sf.MaxEvidenceLen > 0 && len(fix) > sf.MaxEvidenceLen {
 				fix = fix[:sf.MaxEvidenceLen] + "..."
 			}
-			b.WriteString(fmt.Sprintf("  Fix: %s\n", fix))
+			fmt.Fprintf(&b, "  Fix: %s\n", fix)
 		}
 		b.WriteString("\n")
 	}
 
 	if len(findings) > limit {
-		b.WriteString(fmt.Sprintf("... and %d more findings omitted.\n\n", len(findings)-limit))
+		fmt.Fprintf(&b, "... and %d more findings omitted.\n\n", len(findings)-limit)
 	}
 
 	return b.String()

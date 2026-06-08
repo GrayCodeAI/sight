@@ -156,10 +156,10 @@ func buildComment(f FindingInput) Inline {
 		sev = sevLabels[f.Severity]
 	}
 
-	body.WriteString(fmt.Sprintf("**[%s]** %s\n", sev, f.Message))
+	fmt.Fprintf(&body, "**[%s]** %s\n", sev, f.Message)
 
 	if f.Reasoning != "" {
-		body.WriteString(fmt.Sprintf("\n> %s\n", f.Reasoning))
+		fmt.Fprintf(&body, "\n> %s\n", f.Reasoning)
 	}
 
 	c := Inline{
