@@ -24,7 +24,7 @@ sight is an AI-powered code review library for Go. It parses unified diffs, enri
 ```
 sight/
 ├── api/openapi.yaml          📜 MCP tool surface reference
-├── cmd/sight/main.go         🖥️ CLI entry (mcp, taint subcommands)
+├── examples/basic/main.go    🧪 Library usage example (Review with a mock provider)
 ├── sight.go                  📤 Public API: Review(), Finding, Result, Stats
 ├── reviewer.go               🔄 Reviewer: parallel concern orchestration
 ├── options.go                ⚙️ config, With* functions, presets
@@ -93,9 +93,13 @@ type Provider interface {
 
 ## 🔌 MCP Server
 
-```bash
-sight mcp                                    # 📡 stdio transport
-sight mcp --transport http --addr :8080      # 🌐 HTTP transport
+sight ships no standalone binary — the MCP server is an embeddable component
+that the host program (e.g. `hawk`) starts after injecting a `Provider`:
+
+```go
+srv := mcp.New(myProvider, sight.Thorough)
+srv.ServeStdio()             // 📡 stdio transport
+srv.ServeHTTP("127.0.0.1:8080") // 🌐 streamable HTTP transport, served at /mcp
 ```
 
 **Tools:** `sight_review` · `sight_describe` · `sight_improve` · `sight_taint`
@@ -121,4 +125,4 @@ sight mcp --transport http --addr :8080      # 🌐 HTTP transport
 
 **30+ built-in rules** run without LLM overhead — hardcoded secret patterns, SQL injection sinks, unsafe deserialization, etc. Fused with LLM results.
 
-**Taint analysis** (`sight taint --path .`) uses SSA-based cross-function tracking to detect source→sink data flows. Sources, sinks, and sanitizers are configurable.
+**Taint analysis** (exposed via the `sight_taint` MCP tool and the taint-analysis API) uses SSA-based cross-function tracking to detect source→sink data flows. Sources, sinks, and sanitizers are configurable.
