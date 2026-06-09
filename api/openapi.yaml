@@ -15,8 +15,11 @@ info:
   contact:
     url: https://github.com/GrayCodeAI/sight
 
-# No HTTP server by default — MCP uses stdio transport.
-# HTTP transport is available via: sight mcp --transport http --addr 127.0.0.1:8080
+# sight ships no standalone binary. The MCP server is embedded by the host
+# program (e.g. hawk), which injects a Provider and starts a transport:
+#   srv := mcp.New(provider, opts...)
+#   srv.ServeStdio()                 // stdio transport (default)
+#   srv.ServeHTTP("127.0.0.1:8080")  // streamable HTTP transport, served at /mcp
 
 tags:
   - name: review
@@ -26,9 +29,10 @@ tags:
 
 x-mcp-server:
   transport: stdio
-  binary: sight
-  start_command: ["sight", "mcp"]
-  http_transport_command: ["sight", "mcp", "--transport", "http", "--addr", "127.0.0.1:8080"]
+  package: github.com/GrayCodeAI/sight/mcp
+  constructor: mcp.New(provider, opts...)
+  serve_stdio: mcp.Server.ServeStdio()
+  serve_http: mcp.Server.ServeHTTP("127.0.0.1:8080")  # served at /mcp
 
 x-mcp-tools:
   sight_review:

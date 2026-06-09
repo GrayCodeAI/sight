@@ -18,7 +18,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `sarif.go`: `Driver.Version`/`Driver.SemanticVersion` → `"0.1.0"`
     (the SARIF spec version remains `"2.1.0"` — that's a different
     field; it identifies the SARIF format, not the tool)
-  - `internal/output/sarif.go`: same fix in the duplicated SARIF code
+  - `internal/output/output.go`: same fix in the duplicated SARIF code
+    (`FormatSARIF` driver-version site)
 
 ### Added
 - Numeric confidence scoring (0.0-1.0) on every finding
