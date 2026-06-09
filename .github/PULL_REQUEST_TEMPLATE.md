@@ -40,7 +40,7 @@
 ## SARIF compatibility
 
 <!--
-  Did you change `sarif.go` or `internal/output/sarif.go`?
+  Did you change `sarif.go` or `internal/output/output.go` (the SARIF formatter)?
 
   - If yes: confirm the output still validates against the SARIF 2.1.0
     schema and call out any new fields, especially in `tool.driver`.

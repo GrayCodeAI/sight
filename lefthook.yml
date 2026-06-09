@@ -23,7 +23,7 @@ pre-commit:
       glob: "*.go"
       run: |
         if ! command -v gofumpt >/dev/null 2>&1; then
-          echo "lefthook: gofumpt not installed (go install mvdan.cc/gofumpt@latest)"; exit 1
+          echo "lefthook: gofumpt not installed (go install mvdan.cc/gofumpt@v0.10.0)"; exit 1
         fi
         gofumpt -w {staged_files}
       stage_fixed: true
