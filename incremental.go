@@ -230,6 +230,20 @@ func gitRoot(ctx context.Context) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+// validateGitRef ensures a git ref contains no dangerous characters.
+func validateGitRef(ref string) error {
+	if ref == "" {
+		return fmt.Errorf("empty git ref")
+	}
+	if ref[0] == '-' {
+		return fmt.Errorf("git ref %q starts with dash", ref)
+	}
+	if strings.ContainsAny(ref, ";&|$`(){}[]<>!#*?\n\r\x00\\ ") {
+		return fmt.Errorf("git ref %q contains forbidden characters", ref)
+	}
+	return nil
+}
+
 // gitDiffRange runs `git diff base...head` with a context timeout.
 func gitDiffRange(ctx context.Context, base, head string) (string, error) {
 	// Default 30s timeout if context has no deadline
@@ -239,13 +253,22 @@ func gitDiffRange(ctx context.Context, base, head string) (string, error) {
 		defer cancel()
 	}
 
+	if err := validateGitRef(base); err != nil {
+		return "", fmt.Errorf("invalid base ref: %w", err)
+	}
+	if err := validateGitRef(head); err != nil {
+		return "", fmt.Errorf("invalid head ref: %w", err)
+	}
+
 	// Try three-dot syntax first (merge-base diff)
+	// #nosec G204 — base and head validated by validateGitRef above
 	out, err := exec.CommandContext(ctx, "git", "diff", base+"..."+head).Output()
 	if err == nil {
 		return string(out), nil
 	}
 
 	// Fall back to two-dot syntax
+	// #nosec G204 — base and head validated by validateGitRef above
 	out, err = exec.CommandContext(ctx, "git", "diff", base, head).Output()
 	if err != nil {
 		return "", fmt.Errorf("git diff %s %s failed: %w", base, head, err)
