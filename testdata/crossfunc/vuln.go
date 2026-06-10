@@ -33,6 +33,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 // runQuery builds a SQL statement from the tainted parameter (sink in a
 // different function than the source).
 func runQuery(q string) {
+	// #nosec G202 — intentional test data for taint analysis
 	query := "SELECT * FROM users WHERE name = '" + q + "'"
 	_, _ = db.Query(query)
 }

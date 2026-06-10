@@ -75,8 +75,13 @@ func FormatContext(contexts []FileContext) string {
 
 // DiffBase returns the diff of the current branch against a base branch.
 func DiffBase(base string) (string, error) {
+	if err := validateGitRef(base); err != nil {
+		return "", err
+	}
+	// #nosec G204 — base validated by validateGitRef
 	out, err := exec.Command("git", "diff", base+"...HEAD").Output()
 	if err != nil {
+		// #nosec G204 — base validated by validateGitRef
 		out2, err2 := exec.Command("git", "diff", base).Output()
 		if err2 != nil {
 			return "", fmt.Errorf("git diff failed: %w", err)
@@ -88,6 +93,10 @@ func DiffBase(base string) (string, error) {
 
 // ChangedFiles returns the list of files changed relative to a base.
 func ChangedFiles(base string) ([]string, error) {
+	if err := validateGitRef(base); err != nil {
+		return nil, err
+	}
+	// #nosec G204 — base validated by validateGitRef
 	out, err := exec.Command("git", "diff", "--name-only", base+"...HEAD").Output()
 	if err != nil {
 		return nil, fmt.Errorf("git diff --name-only failed: %w", err)
@@ -111,12 +120,27 @@ func Blame(file string, startLine, endLine int) (string, error) {
 		"--", file,
 	}
 
+	// #nosec G204 — file validated by validateFilePath above, startLine/endLine are ints
 	out, err := exec.Command("git", args...).Output()
 	if err != nil {
 		return "", fmt.Errorf("git blame failed: %w", err)
 	}
 
 	return parseBlameAuthors(string(out)), nil
+}
+
+// validateGitRef ensures a git ref (branch, tag, SHA) contains no dangerous characters.
+func validateGitRef(ref string) error {
+	if ref == "" {
+		return fmt.Errorf("empty git ref")
+	}
+	if ref[0] == '-' {
+		return fmt.Errorf("git ref %q starts with dash", ref)
+	}
+	if strings.ContainsAny(ref, ";&|$`(){}[]<>!#*?\n\r\x00\\ ") {
+		return fmt.Errorf("git ref %q contains forbidden characters", ref)
+	}
+	return nil
 }
 
 // validateFilePath ensures a file path does not traverse outside the working directory.
@@ -146,6 +170,7 @@ func recentCommits(file string, n int) ([]string, error) {
 	if err := validateFilePath(file); err != nil {
 		return nil, fmt.Errorf("recentCommits: invalid path: %w", err)
 	}
+	// #nosec G204 — file validated by validateFilePath above
 	out, err := exec.Command("git", "log", "--oneline", "-n", strconv.Itoa(n), "--", file).Output()
 	if err != nil {
 		return nil, err
