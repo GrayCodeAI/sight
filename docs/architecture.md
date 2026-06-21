@@ -29,7 +29,7 @@ sight/
 ├── reviewer.go               🔄 Reviewer: parallel concern orchestration
 ├── options.go                ⚙️ config, With* functions, presets
 ├── provider.go               🔌 Provider interface (consumers implement)
-├── severity.go               📊 Re-exports from hawk/shared/types
+├── severity.go               📊 Re-exports from hawk-core-contracts/types
 ├── static_rules.go           🛡️ 30+ static analysis rules
 ├── taint_analysis.go         🔗 SSA-based taint tracking
 ├── sast_integration.go       🔒 SAST-LLM fusion

@@ -14,6 +14,14 @@
 
 Sight provides intelligent code review capabilities by analyzing diffs with AI. It understands context, identifies issues, and suggests improvements.
 
+## Ecosystem Boundaries
+
+Sight is a Hawk support engine. Keep the dependency edge one-way:
+
+- use `hawk-core-contracts` for any cross-repo shared contracts
+- do not import `hawk/internal/*`
+- do not add new imports of `hawk/shared/types`; that path is compatibility-only
+
 ## Features
 
 - **Diff-aware analysis** - Reviews only changed code with full context

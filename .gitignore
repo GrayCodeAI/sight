@@ -7,6 +7,7 @@
 # Local state
 .claude/
 .codegraph/
+.gocache/
 coverage.out
 
 # macOS
