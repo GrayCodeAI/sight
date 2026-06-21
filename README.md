@@ -20,7 +20,7 @@ Sight is a Hawk support engine. Keep the dependency edge one-way:
 
 - use `hawk-core-contracts` for any cross-repo shared contracts
 - do not import `hawk/internal/*`
-- do not add new imports of `hawk/shared/types`; that path is compatibility-only
+- do not import removed legacy path `hawk/shared/types`; use `hawk-core-contracts/types`
 
 ## Features
 
