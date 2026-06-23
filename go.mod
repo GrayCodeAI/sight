@@ -3,7 +3,7 @@ module github.com/GrayCodeAI/sight
 go 1.26.4
 
 require (
-	github.com/GrayCodeAI/hawk-core-contracts v0.1.0
+	github.com/GrayCodeAI/hawk-core-contracts v0.1.1-0.20260623141030-88eb5d13677c
 	github.com/mark3labs/mcp-go v0.49.0
 	golang.org/x/tools v0.45.0
 )
