@@ -97,6 +97,17 @@ func toContractStats(s Stats) reviewcontracts.Stats {
 	}
 }
 
+func toContractSASTFusion(sf *SASTFusionResult) *reviewcontracts.SASTFusionResult {
+	if sf == nil {
+		return nil
+	}
+	return &reviewcontracts.SASTFusionResult{
+		Confirmed:   ToContractFindings(sf.Confirmed),
+		Dismissed:   ToContractFindings(sf.Dismissed),
+		Unaddressed: ToContractFindings(sf.Unaddressed),
+	}
+}
+
 // ToContractResult converts a sight result into the shared review contract.
 func ToContractResult(r *Result) *reviewcontracts.Result {
 	if r == nil {
@@ -108,6 +119,7 @@ func ToContractResult(r *Result) *reviewcontracts.Result {
 		Stats:               toContractStats(r.Stats),
 		Report:              r.Report,
 		FailOn:              r.FailOn,
+		SASTFusion:          toContractSASTFusion(r.SASTFusion),
 		ConfidenceBreakdown: toContractConfidenceBreakdown(r.ConfidenceBreakdown),
 	}
 }
