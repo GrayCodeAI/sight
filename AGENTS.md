@@ -35,7 +35,7 @@ gofumpt -w .                     # Format
 - Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
 - No `Co-authored-by:` trailers (auto-stripped by githook)
 - `gofumpt` formatting enforced in CI
-- Import `shared/types` from hawk for cross-repo types
+- Import `hawk-core-contracts/types` for cross-repo types
 
 ## Common Pitfalls
 
@@ -49,7 +49,7 @@ gofumpt -w .                     # Format
 - **Option functions use `With` prefix**: `WithProvider()`, `WithMaxTokens()`, `WithParallel()` — never bare `Provider()`
 - **Preset options are bare vars**: `Quick`, `Thorough`, `SecurityFocus`, `CI` — exported `var Option` values
 - **Internal types mirror public ones**: public `Finding` maps to internal `review.Finding` via `toPublicFindings()`
-- **Severity is a type alias**: `type Severity = types.Severity` from `hawk/shared/types` — never define your own
+- **Severity is a type alias**: `type Severity = types.Severity` from `hawk-core-contracts/types` — never define your own
 - **Error sentinel naming**: `ErrNoProvider`, `ErrEmptyDiff`, `ErrContextCancelled` — always `Err` prefix, package-scoped
 - **Mock types in tests**: `mockProvider` (unexported), implements `Provider` with `response string` and `err error` fields
 
@@ -85,7 +85,7 @@ gofumpt -w .                     # Format
 - **Safe to refactor**: `toPublicFindings()`, `toPublicComments()` — mapping functions, add fields freely
 - **Do not touch**: `Provider` interface signature — breaking change for all consumers (hawk, eyrie integration)
 - **Do not touch**: `Finding`, `Result`, `Stats` struct field names/tags — used in JSON serialization by consumers
-- **Do not touch**: `Severity` type alias — it re-exports from `hawk/shared/types`; changing it breaks cross-repo compatibility
+- **Do not touch**: `Severity` type alias — it re-exports from `hawk-core-contracts/types`; changing it breaks cross-repo compatibility
 - **Safe to extend**: add new `Option` functions, new presets, new `StaticRule` entries, new taint source/sink patterns
 - **When adding concerns**: add to `defaultConfig().concerns` list and create corresponding `review.Concern` in `internal/review/`
 
@@ -97,7 +97,7 @@ gofumpt -w .                     # Format
 | Reviewer implementation | `reviewer.go` (orchestration, parallel concerns, reflection) |
 | Configuration & presets | `options.go` (`config` struct, `With*` functions, presets) |
 | LLM provider interface | `provider.go` (`Provider`, `Message`, `ChatOpts`, `Response`) |
-| Severity type alias | `severity.go` (re-exports from `hawk/shared/types`) |
+| Severity type alias | `severity.go` (re-exports from `hawk-core-contracts/types`) |
 | Static analysis rules | `static_rules.go` (`StaticRule`, `StaticAnalyzer`, 30+ rules) |
 | Taint analysis | `taint_analysis.go` (`TaintAnalyzer`, source/sink/sanitizer patterns) |
 | Diff parsing internals | `internal/diff/` |

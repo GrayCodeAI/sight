@@ -1,7 +1,7 @@
 // Package review implements the multi-concern LLM review pipeline.
 package review
 
-import "github.com/GrayCodeAI/hawk/shared/types"
+import "github.com/GrayCodeAI/hawk-core-contracts/types"
 
 // Severity mirrors the public type for internal use.
 type Severity = types.Severity
