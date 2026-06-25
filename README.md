@@ -18,9 +18,10 @@ Sight provides intelligent code review capabilities by analyzing diffs with AI. 
 
 Sight is a Hawk support engine. Keep the dependency edge one-way:
 
-- use `hawk-core-contracts` for any cross-repo shared contracts
+- use `hawk-core-contracts` for any cross-repo shared contracts (severity/finding vocabulary)
 - do not import `hawk/internal/*`
 - do not import removed legacy path `hawk/shared/types`; use `hawk-core-contracts/types`
+- do not import other engines (`eyrie`, `yaad`, `tok`, `trace`, `inspect`) — engines are peers, not dependencies
 
 ## Features
 
