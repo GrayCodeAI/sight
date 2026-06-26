@@ -1,0 +1,20 @@
+# CODEOWNERS for sight (code-review engine)
+* @GrayCodeAI/maintainers
+
+# Engine core
+/internal/       @GrayCodeAI/core-team
+/rules/          @GrayCodeAI/core-team
+
+# API surface
+/api/            @GrayCodeAI/core-team
+/mcp/            @GrayCodeAI/core-team
+
+# CI / release / build tooling
+/.github/        @GrayCodeAI/devops-team
+/Makefile        @GrayCodeAI/devops-team
+/lefthook.yml    @GrayCodeAI/devops-team
+/scripts/        @GrayCodeAI/devops-team
+
+# Documentation
+*.md             @GrayCodeAI/docs-team
+/docs/           @GrayCodeAI/docs-team
