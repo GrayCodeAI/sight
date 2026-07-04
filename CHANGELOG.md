@@ -7,9 +7,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
-## [Unreleased]
+## [0.1.2] - 2026-07-04
 
 ### Changed
+- **MCP server scaffolding moved to the shared
+  [`hawk-mcpkit`](https://github.com/GrayCodeAI/hawk-mcpkit) module.**
+  `mcp/server.go` now delegates server construction, the stdio and
+  streamable-HTTP transports, and argument/result helpers to the kit.
+  Tool names, schemas, and behavior are unchanged. The advertised MCP
+  server version now tracks the `VERSION` file (`sight.Version`)
+  instead of a hardcoded string.
 - **Version re-baselined to `0.1.0`** across the MCP server advertisement
   and both SARIF driver-version sites. Aligns sight with the rest of
   the hawk-eco ecosystem (`hawk`, `tok`, `eyrie`, `yaad`, `trace`,
