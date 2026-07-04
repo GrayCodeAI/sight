@@ -2,13 +2,11 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
+	mcpkit "github.com/GrayCodeAI/hawk-mcpkit"
 	mcplib "github.com/mark3labs/mcp-go/mcp"
-	mcpserver "github.com/mark3labs/mcp-go/server"
 
 	"github.com/GrayCodeAI/sight"
 )
@@ -16,7 +14,7 @@ import (
 // Server wraps the sight library as an MCP server, exposing code review
 // capabilities to any MCP-compatible agent.
 type Server struct {
-	server   *mcpserver.MCPServer
+	kit      *mcpkit.Server
 	provider sight.Provider
 	opts     []sight.Option
 }
@@ -24,50 +22,45 @@ type Server struct {
 // New creates a sight MCP server with the given LLM provider and options.
 func New(provider sight.Provider, opts ...sight.Option) *Server {
 	s := &Server{
+		kit:      mcpkit.New("sight", sight.Version),
 		provider: provider,
 		opts:     opts,
 	}
-	s.server = mcpserver.NewMCPServer(
-		"sight", "0.1.0",
-		mcpserver.WithToolCapabilities(true),
-	)
 	s.registerTools()
 	return s
 }
 
 // ServeStdio starts the MCP server on stdin/stdout.
 func (s *Server) ServeStdio() error {
-	stdio := mcpserver.NewStdioServer(s.server)
-	return stdio.Listen(context.Background(), os.Stdin, os.Stdout)
+	return s.kit.ServeStdio()
 }
 
 // ServeHTTP starts the MCP server on a streamable HTTP endpoint. Clients
 // connect to http://<addr>/mcp.
 func (s *Server) ServeHTTP(addr string) error {
-	httpServer := mcpserver.NewStreamableHTTPServer(s.server)
-	return httpServer.Start(addr)
+	return s.kit.ServeHTTP(addr)
 }
 
 func (s *Server) registerTools() {
-	s.server.AddTool(mcplib.NewTool(
+	s.kit.AddTool(mcplib.NewTool(
 		"sight_review",
 		mcplib.WithDescription("Run AI code review on a unified diff"),
 		mcplib.WithString("diff", mcplib.Required(), mcplib.Description("Unified diff text to review")),
 	), s.handleReview)
 
-	s.server.AddTool(mcplib.NewTool(
+	s.kit.AddTool(mcplib.NewTool(
 		"sight_describe",
 		mcplib.WithDescription("Generate a PR description from a unified diff"),
 		mcplib.WithString("diff", mcplib.Required(), mcplib.Description("Unified diff text")),
 	), s.handleDescribe)
 
-	s.server.AddTool(mcplib.NewTool(
+	s.kit.AddTool(mcplib.NewTool(
 		"sight_improve",
 		mcplib.WithDescription("Suggest code improvements (non-bug focused)"),
 		mcplib.WithString("diff", mcplib.Required(), mcplib.Description("Unified diff text")),
 	), s.handleImprove)
 
-	s.server.AddTool(mcplib.NewTool(
+	s.kit.AddTool(mcplib.NewTool(
 		"sight_taint",
 		mcplib.WithDescription("Run SSA-based cross-function taint analysis on Go packages and return security findings (no LLM required)"),
 		mcplib.WithString("path", mcplib.Required(), mcplib.Description("Filesystem path to the module/directory to analyze")),
@@ -76,12 +69,12 @@ func (s *Server) registerTools() {
 }
 
 func (s *Server) handleTaint(ctx context.Context, req mcplib.CallToolRequest) (*mcplib.CallToolResult, error) {
-	path := strArg(req, "path")
+	path := mcpkit.StrArg(req, "path")
 	if path == "" {
 		return mcplib.NewToolResultError("path is required"), nil
 	}
 	var patterns []string
-	if p := strArg(req, "patterns"); p != "" {
+	if p := mcpkit.StrArg(req, "patterns"); p != "" {
 		for _, part := range strings.Split(p, ",") {
 			if part = strings.TrimSpace(part); part != "" {
 				patterns = append(patterns, part)
@@ -94,16 +87,11 @@ func (s *Server) handleTaint(ctx context.Context, req mcplib.CallToolRequest) (*
 	if err != nil {
 		return mcplib.NewToolResultError(fmt.Sprintf("taint analysis failed: %v", err)), nil
 	}
-
-	b, err := json.MarshalIndent(findings, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	return mcplib.NewToolResultText(string(b)), nil
+	return mcpkit.JSONResult(findings)
 }
 
 func (s *Server) handleReview(ctx context.Context, req mcplib.CallToolRequest) (*mcplib.CallToolResult, error) {
-	diff := strArg(req, "diff")
+	diff := mcpkit.StrArg(req, "diff")
 	if diff == "" {
 		return mcplib.NewToolResultError("diff is required"), nil
 	}
@@ -113,16 +101,11 @@ func (s *Server) handleReview(ctx context.Context, req mcplib.CallToolRequest) (
 	if err != nil {
 		return mcplib.NewToolResultError(fmt.Sprintf("review failed: %v", err)), nil
 	}
-
-	b, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	return mcplib.NewToolResultText(string(b)), nil
+	return mcpkit.JSONResult(result)
 }
 
 func (s *Server) handleDescribe(ctx context.Context, req mcplib.CallToolRequest) (*mcplib.CallToolResult, error) {
-	diff := strArg(req, "diff")
+	diff := mcpkit.StrArg(req, "diff")
 	if diff == "" {
 		return mcplib.NewToolResultError("diff is required"), nil
 	}
@@ -132,16 +115,11 @@ func (s *Server) handleDescribe(ctx context.Context, req mcplib.CallToolRequest)
 	if err != nil {
 		return mcplib.NewToolResultError(fmt.Sprintf("describe failed: %v", err)), nil
 	}
-
-	b, err := json.MarshalIndent(desc, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	return mcplib.NewToolResultText(string(b)), nil
+	return mcpkit.JSONResult(desc)
 }
 
 func (s *Server) handleImprove(ctx context.Context, req mcplib.CallToolRequest) (*mcplib.CallToolResult, error) {
-	diff := strArg(req, "diff")
+	diff := mcpkit.StrArg(req, "diff")
 	if diff == "" {
 		return mcplib.NewToolResultError("diff is required"), nil
 	}
@@ -151,17 +129,5 @@ func (s *Server) handleImprove(ctx context.Context, req mcplib.CallToolRequest) 
 	if err != nil {
 		return mcplib.NewToolResultError(fmt.Sprintf("improve failed: %v", err)), nil
 	}
-
-	b, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	return mcplib.NewToolResultText(string(b)), nil
-}
-
-func strArg(req mcplib.CallToolRequest, key string) string {
-	if v, ok := req.GetArguments()[key].(string); ok {
-		return v
-	}
-	return ""
+	return mcpkit.JSONResult(result)
 }
