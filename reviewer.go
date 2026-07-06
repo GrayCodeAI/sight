@@ -13,18 +13,39 @@ import (
 	gitctx "github.com/GrayCodeAI/sight/internal/context"
 	"github.com/GrayCodeAI/sight/internal/diff"
 	"github.com/GrayCodeAI/sight/internal/output"
+	"github.com/GrayCodeAI/sight/internal/graph"
 	"github.com/GrayCodeAI/sight/internal/review"
 )
 
 // Reviewer is a reusable code reviewer. Create one with NewReviewer and call
 // Review multiple times. It is safe for concurrent use.
 type Reviewer struct {
-	cfg *config
+	cfg  *config
+	g    *graph.DependencyGraph
+	audit bool
 }
 
 // NewReviewer creates a configured Reviewer.
 func NewReviewer(opts ...Option) *Reviewer {
-	return &Reviewer{cfg: buildConfig(opts)}
+	cfg := buildConfig(opts)
+	r := &Reviewer{cfg: cfg}
+
+	// Enable graph if available
+	if cfg.graphEnabled {
+		r.g = graph.New()
+	}
+
+	// Enable audit if configured
+	if cfg.auditMode != AuditModeNone {
+		r.audit = true
+	}
+
+	return r
+}
+
+// reviewGraphEnabled checks if graph-based review is enabled.
+func (r *Reviewer) reviewGraphEnabled() bool {
+	return r.cfg.graphEnabled && r.g != nil
 }
 
 // Review parses the diff, builds context, and runs multi-concern analysis.
