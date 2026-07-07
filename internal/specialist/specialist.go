@@ -179,7 +179,7 @@ func (m *Manager) loadSpecialistsFromDir(dir string, scope string) error {
 		}
 
 		manifestPath := filepath.Join(dir, entry.Name())
-		data, err := os.ReadFile(manifestPath)
+		data, err := os.ReadFile(manifestPath) // #nosec G304 -- manifestPath is joined from a directory being scanned and an entry name returned by os.ReadDir on that same directory, not raw user input
 		if err != nil {
 			continue
 		}
@@ -297,7 +297,10 @@ func (m *Manager) LoadAllSpecialists() error {
 
 	// Load from project directory
 	if cwd, err := os.Getwd(); err == nil {
-		m.LoadProjectSpecialists(cwd)
+		if err := m.LoadProjectSpecialists(cwd); err != nil {
+			// Non-fatal: project specialists are optional
+			fmt.Fprintf(os.Stderr, "warning: could not load project specialists: %v\n", err)
+		}
 	}
 
 	return nil

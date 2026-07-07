@@ -99,7 +99,7 @@ func (m *SuiteManager) LoadSuitesFromDir(dir string) error {
 		}
 
 		suitePath := filepath.Join(dir, entry.Name())
-		data, err := os.ReadFile(suitePath)
+		data, err := os.ReadFile(suitePath) // #nosec G304 -- suitePath is joined from a directory being loaded (a fixed evals/suites path or os.TempDir()-based path, see LoadDefaultSuites) and an entry name from os.ReadDir on that directory, not raw user input
 		if err != nil {
 			continue
 		}
@@ -248,7 +248,10 @@ func (m *SuiteManager) LoadDefaultSuites() error {
 	// Load from project directory
 	if cwd, err := os.Getwd(); err == nil {
 		suitesDir := filepath.Join(cwd, "evals", "suites")
-		m.LoadSuitesFromDir(suitesDir)
+		if err := m.LoadSuitesFromDir(suitesDir); err != nil {
+			// Non-fatal: project evals are optional
+			fmt.Fprintf(os.Stderr, "warning: could not load project evals: %v\n", err)
+		}
 	}
 
 	// Load from user config

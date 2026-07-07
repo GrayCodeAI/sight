@@ -45,5 +45,5 @@ func runCmd(c string) {
 
 // readConfig opens a file using the tainted path (path traversal sink).
 func readConfig(path string) {
-	_, _ = os.ReadFile(path)
+	_, _ = os.ReadFile(path) // #nosec G304 -- intentional test fixture reproducing a path-traversal vulnerability pattern for the taint analyzer to detect; not production code
 }

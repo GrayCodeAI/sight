@@ -73,7 +73,7 @@ func (d *Dispatcher) dispatch(hookType HookType, context string) error {
 	}
 
 	for _, hook := range hooks {
-		cmd := exec.Command(hook.Command, hook.Args...)
+		cmd := exec.Command(hook.Command, hook.Args...) // #nosec G204 -- hook.Command is user-configured via hook registration/config files, executing arbitrary commands is the intended feature
 		cmd.Env = append(os.Environ(), fmt.Sprintf("HOOK_CONTEXT=%s", context))
 
 		output, err := cmd.CombinedOutput()
@@ -123,7 +123,7 @@ func (d *Dispatcher) LoadHooksFromDir(dir string) error {
 		}
 
 		hookPath := filepath.Join(dir, entry.Name())
-		data, err := os.ReadFile(hookPath)
+		data, err := os.ReadFile(hookPath) // #nosec G304 -- hookPath is joined from a directory being scanned and an entry name returned by os.ReadDir on that same directory, not raw user input
 		if err != nil {
 			continue
 		}

@@ -40,7 +40,7 @@ func LoadConfigFile(dir string) (*FileConfig, error) {
 		return nil, fmt.Errorf("config file %s is too large (%d bytes, max %d bytes)", path, info.Size(), maxConfigSize)
 	}
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path comes from findConfigFile(dir), which searches for .sight.toml in the project directory being reviewed or its parents, not attacker-controlled input
 	if err != nil {
 		return nil, err
 	}
