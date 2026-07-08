@@ -1,6 +1,7 @@
 package sight
 
 import (
+	"context"
 	"fmt"
 	"go/token"
 	"go/types"
@@ -37,11 +38,22 @@ func NewSSATaintAnalyzer() *SSATaintAnalyzer {
 // "./...", "./internal/handlers") rooted at dir, builds SSA, and reports
 // cross-function taint flows as Findings. A non-nil error is returned only for
 // load failures; per-package type errors are tolerated where possible.
+//
+// The load has no deadline; callers analyzing untrusted or unbounded input
+// (e.g. an MCP tool argument) should use AnalyzePackagesContext instead.
 func (a *SSATaintAnalyzer) AnalyzePackages(dir string, patterns ...string) ([]Finding, error) {
+	return a.AnalyzePackagesContext(context.Background(), dir, patterns...)
+}
+
+// AnalyzePackagesContext is AnalyzePackages with a caller-supplied context,
+// so the package load (which shells out to `go list` and can run arbitrarily
+// long against a large or pathological module) can be bounded or cancelled.
+func (a *SSATaintAnalyzer) AnalyzePackagesContext(ctx context.Context, dir string, patterns ...string) ([]Finding, error) {
 	if len(patterns) == 0 {
 		patterns = []string{"./..."}
 	}
 	cfg := &packages.Config{
+		Context: ctx,
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
 			packages.NeedImports | packages.NeedDeps | packages.NeedTypes |
 			packages.NeedSyntax | packages.NeedTypesInfo,

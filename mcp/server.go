@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	mcpkit "github.com/GrayCodeAI/hawk-mcpkit"
 	mcplib "github.com/mark3labs/mcp-go/mcp"
@@ -82,8 +83,11 @@ func (s *Server) handleTaint(ctx context.Context, req mcplib.CallToolRequest) (*
 		}
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
 	analyzer := sight.NewSSATaintAnalyzer()
-	findings, err := analyzer.AnalyzePackages(path, patterns...)
+	findings, err := analyzer.AnalyzePackagesContext(ctx, path, patterns...)
 	if err != nil {
 		return mcplib.NewToolResultError(fmt.Sprintf("taint analysis failed: %v", err)), nil
 	}
