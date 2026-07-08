@@ -17,8 +17,8 @@ type HookType string
 const (
 	HookBeforeReview HookType = "beforeReview"
 	HookAfterReview  HookType = "afterReview"
-	HookSessionStart  HookType = "sessionStart"
-	HookSessionEnd    HookType = "sessionEnd"
+	HookSessionStart HookType = "sessionStart"
+	HookSessionEnd   HookType = "sessionEnd"
 )
 
 // Hook represents a lifecycle hook.
@@ -30,8 +30,8 @@ type Hook struct {
 
 // Dispatcher manages hooks and dispatches them.
 type Dispatcher struct {
-	mu      sync.RWMutex
-	hooks   map[HookType][]*Hook
+	mu    sync.RWMutex
+	hooks map[HookType][]*Hook
 }
 
 // NewDispatcher creates a new hook dispatcher.

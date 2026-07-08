@@ -105,7 +105,7 @@ func TestLoadHooksFromDir(t *testing.T) {
 	hookContent := []byte(`---
 command: echo
 `)
-	err := os.WriteFile(filepath.Join(tmpDir, "test.md"), hookContent, 0644)
+	err := os.WriteFile(filepath.Join(tmpDir, "test.md"), hookContent, 0o644)
 	if err != nil {
 		t.Fatalf("failed to create hook file: %v", err)
 	}

@@ -80,11 +80,11 @@ func (e EdgeType) String() string {
 
 // BlastRadiusResult represents the results of a blast-radius analysis.
 type BlastRadiusResult struct {
-	Files        []string  `json:"files"`
-	Direct       int       `json:"direct"`
-	Transitive   int       `json:"transitive"`
-	MaxDepth     int       `json:"max_depth"`
-	ImpactScore  float64   `json:"impact_score"`
+	Files       []string `json:"files"`
+	Direct      int      `json:"direct"`
+	Transitive  int      `json:"transitive"`
+	MaxDepth    int      `json:"max_depth"`
+	ImpactScore float64  `json:"impact_score"`
 }
 
 // Score computes an overall impact score.
@@ -415,4 +415,3 @@ func sortByScore(strs []string, scores map[string]float64) {
 		return scores[strs[i]] > scores[strs[j]]
 	})
 }
-

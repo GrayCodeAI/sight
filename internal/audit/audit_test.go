@@ -23,13 +23,13 @@ func TestAddFinding(t *testing.T) {
 	report := NewAuditReport()
 
 	finding := AuditFinding{
-		Severity:     "high",
-		Category:     "injection",
-		File:         "main.go",
-		Line:         10,
-		Description:  "SQL injection detected",
+		Severity:       "high",
+		Category:       "injection",
+		File:           "main.go",
+		Line:           10,
+		Description:    "SQL injection detected",
 		Recommendation: "Use parameterized queries",
-		Source:       "static_analysis",
+		Source:         "static_analysis",
 	}
 
 	report.AddFinding(finding)
@@ -150,13 +150,13 @@ func TestSummary(t *testing.T) {
 
 func TestAuditFindingJSON(t *testing.T) {
 	finding := AuditFinding{
-		Severity:     "high",
-		Category:     "injection",
-		File:         "main.go",
-		Line:         10,
-		Description:  "SQL injection detected",
+		Severity:       "high",
+		Category:       "injection",
+		File:           "main.go",
+		Line:           10,
+		Description:    "SQL injection detected",
 		Recommendation: "Use parameterized queries",
-		Source:       "static_analysis",
+		Source:         "static_analysis",
 	}
 
 	data, err := json.Marshal(finding)
@@ -293,17 +293,17 @@ func TestConcurrentAddFinding(t *testing.T) {
 			defer wg.Done()
 			if sev == "error" {
 				report.AddFinding(AuditFinding{
-					Severity: "high",
-					Category: "error",
+					Severity:    "high",
+					Category:    "error",
 					Description: err.Error(),
-					Source: "test",
+					Source:      "test",
 				})
 			} else {
 				report.AddFinding(AuditFinding{
-					Severity: sev,
-					Category: "test",
+					Severity:    sev,
+					Category:    "test",
 					Description: "Test finding",
-					Source: "test",
+					Source:      "test",
 				})
 			}
 		}([]string{"high", "medium", "low"}[i%3])

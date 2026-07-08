@@ -40,14 +40,14 @@ type AuditTarget struct {
 
 // AuditFinding represents a security finding from an audit.
 type AuditFinding struct {
-	Severity    string `json:"severity"`
-	Category    string `json:"category"`
-	File        string `json:"file"`
-	Line        int    `json:"line"`
-	Description string `json:"description"`
+	Severity       string `json:"severity"`
+	Category       string `json:"category"`
+	File           string `json:"file"`
+	Line           int    `json:"line"`
+	Description    string `json:"description"`
 	Recommendation string `json:"recommendation"`
-	Evidence     string `json:"evidence,omitempty"`
-	Source      string `json:"source"`
+	Evidence       string `json:"evidence,omitempty"`
+	Source         string `json:"source"`
 }
 
 // AuditReport contains the results of an audit.
@@ -59,19 +59,19 @@ type AuditReport struct {
 
 // AuditStats contains statistics about the audit.
 type AuditStats struct {
-	TotalTargets   int
-	TargetsScanned int
+	TotalTargets       int
+	TargetsScanned     int
 	FindingsBySeverity map[string]int
-	Categories       map[string]int
-	DurationMs     int64
+	Categories         map[string]int
+	DurationMs         int64
 }
 
 // AuditScope defines the scope of an audit.
 type AuditScope struct {
-	Targets    []AuditTarget
-	Rules      []string
-	Timeout    time.Duration
-	MaxDepth   int
+	Targets     []AuditTarget
+	Rules       []string
+	Timeout     time.Duration
+	MaxDepth    int
 	Concurrency int
 }
 
@@ -210,11 +210,11 @@ func Audit(ctx context.Context, scope *AuditScope) (*AuditReport, error) {
 
 			if err := auditTarget(ctx, t, scope, report); err != nil {
 				report.AddFinding(AuditFinding{
-					Severity: "medium",
-					Category: "audit_error",
-					File:     t.Path,
+					Severity:    "medium",
+					Category:    "audit_error",
+					File:        t.Path,
 					Description: fmt.Sprintf("Audit failed: %v", err),
-					Source:   "audit",
+					Source:      "audit",
 				})
 			}
 		}(target)
@@ -223,12 +223,12 @@ func Audit(ctx context.Context, scope *AuditScope) (*AuditReport, error) {
 		select {
 		case <-ctx.Done():
 			report.AddFinding(AuditFinding{
-					Severity: "medium",
-					Category: "timeout",
-					Description: "Audit timed out",
-					Source:   "audit",
-				})
-				return report, ctx.Err()
+				Severity:    "medium",
+				Category:    "timeout",
+				Description: "Audit timed out",
+				Source:      "audit",
+			})
+			return report, ctx.Err()
 		default:
 		}
 	}

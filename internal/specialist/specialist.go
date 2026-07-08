@@ -29,9 +29,9 @@ const (
 // Permission constants define tool permissions.
 const (
 	PermissionReadOnly = "read-only"
-	PermissionPlan    = "plan"
-	PermissionDeny    = "deny"
-	PermissionAllow   = "allow"
+	PermissionPlan     = "plan"
+	PermissionDeny     = "deny"
+	PermissionAllow    = "allow"
 )
 
 // SpecialistManifest represents a specialist's manifest file.
@@ -63,7 +63,7 @@ func (s *Specialist) HasTool(tool string) bool {
 
 // Manager manages specialists across different scopes.
 type Manager struct {
-	mu        sync.RWMutex
+	mu          sync.RWMutex
 	specialists map[string]*Specialist
 }
 

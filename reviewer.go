@@ -12,16 +12,16 @@ import (
 	"github.com/GrayCodeAI/sight/internal/comment"
 	gitctx "github.com/GrayCodeAI/sight/internal/context"
 	"github.com/GrayCodeAI/sight/internal/diff"
-	"github.com/GrayCodeAI/sight/internal/output"
 	"github.com/GrayCodeAI/sight/internal/graph"
+	"github.com/GrayCodeAI/sight/internal/output"
 	"github.com/GrayCodeAI/sight/internal/review"
 )
 
 // Reviewer is a reusable code reviewer. Create one with NewReviewer and call
 // Review multiple times. It is safe for concurrent use.
 type Reviewer struct {
-	cfg  *config
-	g    *graph.DependencyGraph
+	cfg   *config
+	g     *graph.DependencyGraph
 	audit bool
 }
 

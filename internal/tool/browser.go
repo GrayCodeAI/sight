@@ -16,19 +16,19 @@ import (
 
 // BrowserOptions configures browser behavior.
 type BrowserOptions struct {
-	Timeout       time.Duration
-	Follow        bool
+	Timeout      time.Duration
+	Follow       bool
 	MaxRedirects int
-	Headers       map[string]string
+	Headers      map[string]string
 }
 
 // DefaultBrowserOptions returns default browser options.
 func DefaultBrowserOptions() BrowserOptions {
 	return BrowserOptions{
-		Timeout:       30 * time.Second,
-		Follow:        true,
+		Timeout:      30 * time.Second,
+		Follow:       true,
 		MaxRedirects: 10,
-		Headers:       make(map[string]string),
+		Headers:      make(map[string]string),
 	}
 }
 

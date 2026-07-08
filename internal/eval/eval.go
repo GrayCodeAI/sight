@@ -37,11 +37,11 @@ type ExpectedResult struct {
 
 // Result represents the result of running an eval test.
 type Result struct {
-	Test        *Test
-	Passed      bool
-	Output      string
-	Error       error
-	DurationMs  int64
+	Test       *Test
+	Passed     bool
+	Output     string
+	Error      error
+	DurationMs int64
 }
 
 // Report represents evaluation report.
@@ -53,11 +53,11 @@ type Report struct {
 
 // Summary represents evaluation summary.
 type Summary struct {
-	TotalTests   int
-	PassedTests  int
-	FailedTests  int
-	PassRate     float64
-	TotalTimeMs  int64
+	TotalTests  int
+	PassedTests int
+	FailedTests int
+	PassRate    float64
+	TotalTimeMs int64
 }
 
 // SuiteManager manages evaluation suites.

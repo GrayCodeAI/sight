@@ -137,7 +137,7 @@ const (
 type AuditTargetType int
 
 const (
-	AuditTargetHooks       AuditTargetType = iota
+	AuditTargetHooks AuditTargetType = iota
 	AuditTargetMCP
 	AuditTargetPermissions
 	AuditTargetSecrets
