@@ -134,20 +134,21 @@ func (m *Manager) RegisterBuiltin() {
 	}
 }
 
-// LoadProjectSpecialists loads specialists from a project directory.
+// LoadProjectSpecialists loads specialists from every known project
+// location that exists, merging their contents (later locations take
+// precedence for a given name).
 func (m *Manager) LoadProjectSpecialists(dir string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Try multiple locations
 	locations := []string{
 		filepath.Join(dir, ".zero", "specialists"),
 		filepath.Join(dir, "specialists"),
 	}
 
 	for _, loc := range locations {
-		if err := m.loadSpecialistsFromDir(loc, ScopeProject); err == nil {
-			return nil
+		if err := m.loadSpecialistsFromDir(loc, ScopeProject); err != nil {
+			return err
 		}
 	}
 
@@ -156,6 +157,8 @@ func (m *Manager) LoadProjectSpecialists(dir string) error {
 
 // LoadUserSpecialists loads specialists from user config directory.
 func (m *Manager) LoadUserSpecialists(dir string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	return m.loadSpecialistsFromDir(dir, ScopeUser)
 }
 
@@ -194,6 +197,7 @@ func (m *Manager) loadSpecialistsFromDir(dir string, scope string) error {
 		specialist := &Specialist{
 			Name:        name,
 			Description: manifest.Description,
+			Tools:       manifest.Tools,
 			Scope:       scope,
 		}
 
@@ -203,58 +207,62 @@ func (m *Manager) loadSpecialistsFromDir(dir string, scope string) error {
 	return nil
 }
 
-// parseYAML parses YAML content from a file.
+// parseYAML does a minimal, dependency-free parse of the small subset of
+// YAML used by specialist manifests: a top-level "description:" scalar
+// (optionally a block scalar introduced by "|") and a top-level "tools:"
+// sequence of "- item" entries indented under it.
 func (m *Manager) parseYAML(data []byte, v interface{}) error {
-	// Simple YAML parsing using strings
+	manifest, ok := v.(*SpecialistManifest)
+	if !ok {
+		return fmt.Errorf("parseYAML: unsupported target type %T", v)
+	}
+
 	lines := strings.Split(string(data), "\n")
 	for i := 0; i < len(lines); i++ {
 		line := strings.TrimSpace(lines[i])
 
-		if strings.HasPrefix(line, "description:") {
-			desc := strings.TrimPrefix(line, "description:")
-			if desc := strings.TrimSpace(desc); desc != "" && desc != "|" {
-				switch {
-				case strings.HasPrefix(desc, "\""):
-					if strings.HasSuffix(desc, "\"") {
-						i++
-						continue
-					}
-				case strings.HasPrefix(desc, "|"):
-					var content []string
-					for j := i + 1; j < len(lines) && (strings.HasPrefix(strings.TrimSpace(lines[j]), " ") || strings.TrimSpace(lines[j]) == ""); j++ {
-						content = append(content, strings.TrimSpace(lines[j]))
-					}
-					if len(content) > 0 {
-						if desc := strings.Join(content, "\n"); desc != "" {
-							break
-						}
-					}
-				default:
-					if desc != "" && desc != "|" {
-						break
-					}
-				}
-				break
-			}
-		}
+		switch {
+		case strings.HasPrefix(line, "description:"):
+			desc := strings.TrimSpace(strings.TrimPrefix(line, "description:"))
+			desc = strings.Trim(desc, "\"")
 
-		if strings.HasPrefix(line, "tools:") {
+			if desc == "|" || desc == ">" {
+				var content []string
+				j := i + 1
+				for ; j < len(lines) && isIndented(lines[j]); j++ {
+					content = append(content, strings.TrimSpace(lines[j]))
+				}
+				desc = strings.Join(content, "\n")
+				i = j - 1
+			}
+
+			manifest.Description = desc
+
+		case strings.HasPrefix(line, "tools:"):
 			var tools []string
-			for j := i + 1; j < len(lines); j++ {
-				toolLine := strings.TrimSpace(lines[j])
-				if toolLine == "" || strings.HasPrefix(toolLine, " ") {
-					if toolLine != "" {
-						tools = append(tools, strings.TrimSpace(toolLine))
-					}
-				} else {
-					break
+			j := i + 1
+			for ; j < len(lines) && isIndented(lines[j]); j++ {
+				item := strings.TrimPrefix(strings.TrimSpace(lines[j]), "- ")
+				item = strings.TrimSpace(item)
+				if item != "" {
+					tools = append(tools, item)
 				}
 			}
-			i += len(tools)
+			manifest.Tools = tools
+			i = j - 1
 		}
 	}
 
 	return nil
+}
+
+// isIndented reports whether line is a non-empty YAML line indented under
+// its parent key (i.e. a continuation line, not the start of the next key).
+func isIndented(line string) bool {
+	if strings.TrimSpace(line) == "" {
+		return false
+	}
+	return strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t")
 }
 
 // FindSpecialist finds a specialist by name with scope priority.

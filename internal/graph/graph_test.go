@@ -1,7 +1,10 @@
 package graph
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -140,6 +143,107 @@ func TestNodeTypeString(t *testing.T) {
 		if got != tt.expected {
 			t.Errorf("NodeType(%d).String() = %q, want %q", tt.nodeType, got, tt.expected)
 		}
+	}
+}
+
+func TestEdgeTypeString(t *testing.T) {
+	tests := []struct {
+		edgeType EdgeType
+		expected string
+	}{
+		{EdgeCalls, "calls"},
+		{EdgeReturns, "unknown"},
+		{EdgeType(99), "unknown"},
+	}
+	for _, tt := range tests {
+		if got := tt.edgeType.String(); got != tt.expected {
+			t.Errorf("EdgeType(%d).String() = %q, want %q", tt.edgeType, got, tt.expected)
+		}
+	}
+}
+
+func TestBlastRadiusResultScore(t *testing.T) {
+	empty := &BlastRadiusResult{}
+	if got := empty.Score(); got != 0 {
+		t.Errorf("Score() on empty result = %v, want 0", got)
+	}
+
+	r := &BlastRadiusResult{
+		Files:    []string{"a", "b", "c", "d"},
+		Direct:   1,
+		MaxDepth: 4,
+	}
+	if got := r.Score(); got <= 0 {
+		t.Errorf("Score() = %v, want > 0", got)
+	}
+}
+
+func TestBuild(t *testing.T) {
+	dir := t.TempDir()
+
+	src := `package example
+
+type Greeter struct {
+	Name string
+}
+
+type Speaker interface {
+	Speak() string
+}
+
+func (g *Greeter) Speak() string {
+	return greet(g.Name)
+}
+
+func greet(name string) string {
+	return "hello " + name
+}
+
+func compute() (result int) {
+	result = 1
+	return
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "example.go"), []byte(src), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	g := New()
+	if err := g.Build(context.Background(), dir); err != nil {
+		t.Fatalf("Build returned err: %v", err)
+	}
+
+	foundStruct, foundInterface, foundMethod, foundFunc := false, false, false, false
+	for _, n := range g.nodes {
+		switch {
+		case n.Type == NodeTypeStruct && n.Name == "Greeter":
+			foundStruct = true
+		case n.Type == NodeTypeInterface && n.Name == "Speaker":
+			foundInterface = true
+		case n.Type == NodeTypeMethod && n.Name == "Greeter.Speak":
+			foundMethod = true
+		case n.Name == "greet":
+			foundFunc = true
+		}
+	}
+	if !foundStruct {
+		t.Error("Build did not register the Greeter struct")
+	}
+	if !foundInterface {
+		t.Error("Build did not register the Speaker interface")
+	}
+	if !foundMethod {
+		t.Error("Build did not register the Greeter.Speak method")
+	}
+	if !foundFunc {
+		t.Error("Build did not register a call to greet")
+	}
+}
+
+func TestBuildInvalidDir(t *testing.T) {
+	g := New()
+	if err := g.Build(context.Background(), filepath.Join(t.TempDir(), "does-not-exist")); err == nil {
+		t.Fatal("Build on a non-existent directory should return an error")
 	}
 }
 

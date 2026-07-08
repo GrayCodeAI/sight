@@ -253,7 +253,11 @@ func (g *DependencyGraph) processFuncDecl(d *ast.FuncDecl, fileURI string) {
 
 	if d.Recv != nil {
 		for _, r := range d.Recv.List {
-			if ident, ok := r.Type.(*ast.Ident); ok {
+			recvType := r.Type
+			if star, ok := recvType.(*ast.StarExpr); ok {
+				recvType = star.X
+			}
+			if ident, ok := recvType.(*ast.Ident); ok {
 				typName = ident.Name
 			}
 		}
