@@ -93,7 +93,7 @@ func RunEval(ctx context.Context, suite *EvalSuite, opts ...Option) ([]EvalResul
 
 // LoadEvalSuite loads eval cases from a JSON file.
 func LoadEvalSuite(path string) (*EvalSuite, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a caller-supplied eval suite file location (this tool's own eval fixtures), not attacker-controlled input
 	if err != nil {
 		return nil, fmt.Errorf("loading eval suite: %w", err)
 	}

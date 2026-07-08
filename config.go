@@ -19,6 +19,8 @@ type FileConfig struct {
 	Reflection *bool             `json:"reflection"`
 	Parallel   *bool             `json:"parallel"`
 	Prompts    map[string]string `json:"prompts"`
+	Graph      *bool             `json:"graph"`
+	Audit      *string           `json:"audit"` // "none", "hooks", "mcp", "full"
 }
 
 // LoadConfigFile reads .sight.toml from the given directory (or parents).
@@ -38,7 +40,7 @@ func LoadConfigFile(dir string) (*FileConfig, error) {
 		return nil, fmt.Errorf("config file %s is too large (%d bytes, max %d bytes)", path, info.Size(), maxConfigSize)
 	}
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path comes from findConfigFile(dir), which searches for .sight.toml in the project directory being reviewed or its parents, not attacker-controlled input
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +79,12 @@ func ApplyFileConfig(fc *FileConfig) []Option {
 	}
 	if len(fc.Exclude) > 0 {
 		opts = append(opts, WithExclude(fc.Exclude...))
+	}
+	if fc.Graph != nil {
+		opts = append(opts, WithGraph(*fc.Graph))
+	}
+	if fc.Audit != nil {
+		opts = append(opts, WithAuditMode(ParseAuditMode(*fc.Audit)))
 	}
 
 	return opts
@@ -152,6 +160,11 @@ func parseTOMLConfig(content string) (*FileConfig, error) {
 		case "parallel":
 			b := value == "true"
 			cfg.Parallel = &b
+		case "graph":
+			b := value == "true"
+			cfg.Graph = &b
+		case "audit":
+			cfg.Audit = &value
 		}
 	}
 

@@ -43,6 +43,9 @@ type config struct {
 	exclude        []string
 	minScore       int
 	projectRules   string
+	graphEnabled   bool
+	auditMode      AuditMode
+	auditTargets   []AuditTarget
 }
 
 // defaultExclude is the default set of file patterns excluded from review.
@@ -116,10 +119,57 @@ var CI Option = optFunc(func(c *config) {
 	c.failOn = SeverityHigh
 })
 
+// AuditMode represents the audit mode for code review.
+type AuditMode int
+
+const (
+	// AuditModeNone disables security audit.
+	AuditModeNone AuditMode = iota
+	// AuditModeHooks audits hooks only.
+	AuditModeHooks
+	// AuditModeMCP audits MCP servers only.
+	AuditModeMCP
+	// AuditModeFull performs comprehensive audit.
+	AuditModeFull
+)
+
+// AuditTargetType represents a type of audit target.
+type AuditTargetType int
+
+const (
+	AuditTargetHooks AuditTargetType = iota
+	AuditTargetMCP
+	AuditTargetPermissions
+	AuditTargetSecrets
+)
+
+// AuditTarget represents a target to audit in the codebase.
+type AuditTarget struct {
+	Type    AuditTargetType
+	Path    string
+	Recurse bool
+}
+
+// AuditOption configures security audit options.
+type AuditOption struct {
+	Mode    AuditMode
+	Targets []AuditTarget
+}
+
 // Configuration functions
 
 func WithProvider(p Provider) Option {
 	return optFunc(func(c *config) { c.provider = p })
+}
+
+// WithAuditTargets specifies audit targets for security auditing.
+func WithAuditTargets(targets ...AuditTarget) Option {
+	return optFunc(func(c *config) { c.auditTargets = targets })
+}
+
+// WithAuditMode sets the audit mode.
+func WithAuditMode(mode AuditMode) Option {
+	return optFunc(func(c *config) { c.auditMode = mode })
 }
 
 func WithModel(model string) Option {
@@ -200,4 +250,23 @@ func WithProjectRules(rules string) Option {
 // FilterFile, and FilterNone.
 func WithFilterMode(mode FilterMode) Option {
 	return optFunc(func(c *config) { c.filterMode = mode })
+}
+
+// WithGraph enables structural dependency graph for blast-radius analysis.
+func WithGraph(enabled bool) Option {
+	return optFunc(func(c *config) { c.graphEnabled = enabled })
+}
+
+// ParseAuditMode converts a string audit mode to AuditMode.
+func ParseAuditMode(s string) AuditMode {
+	switch s {
+	case "full":
+		return AuditModeFull
+	case "mcp":
+		return AuditModeMCP
+	case "hooks":
+		return AuditModeHooks
+	default:
+		return AuditModeNone
+	}
 }
