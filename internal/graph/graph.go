@@ -98,12 +98,12 @@ func (b *BlastRadiusResult) Score() float64 {
 			score += 1.0
 		} else {
 			depth := b.MaxDepth - int(float64(b.MaxDepth)*(float64(i)/float64(len(b.Files))))
-			switch {
-			case depth == 2:
+			switch depth {
+			case 2:
 				score += 0.8
-			case depth == 3:
+			case 3:
 				score += 0.6
-			case depth == 4:
+			case 4:
 				score += 0.4
 			default:
 				score += 0.2
@@ -405,9 +405,7 @@ func (g *DependencyGraph) GetBlastRadius(files []string) *BlastRadiusResult {
 	for _, file := range files {
 		fileScores[file] = 1.0
 	}
-	for _, file := range files {
-		result.Files = append(result.Files, file)
-	}
+	result.Files = append(result.Files, files...)
 
 	sortByScore(result.Files, fileScores)
 	result.ImpactScore = result.Score()

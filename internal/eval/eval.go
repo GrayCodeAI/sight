@@ -290,7 +290,7 @@ func Materialize(test *Test) string {
 	cmd := test.Command
 	for _, fixture := range test.Args {
 		if data, ok := GetFixture(fixture); ok {
-			cmd = strings.Replace(cmd, fixture, data, -1)
+			cmd = strings.ReplaceAll(cmd, fixture, data)
 		}
 	}
 	return cmd

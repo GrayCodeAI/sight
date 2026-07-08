@@ -157,39 +157,6 @@ func (d *Dispatcher) extractCommand(data []byte) string {
 	return ""
 }
 
-// parseHookContent parses hook content from a file.
-func (d *Dispatcher) parseHookContent(data []byte) *Hook {
-	// Simple parsing: extract command and args
-	lines := strings.Split(string(data), "\n")
-	for i, line := range lines {
-		line = strings.TrimSpace(line)
-
-		if strings.HasPrefix(line, "command:") {
-			cmd := strings.TrimPrefix(line, "command:")
-			cmd = strings.TrimSpace(cmd)
-			cmd = strings.Trim(cmd, "\"'")
-
-			var args []string
-			if i+1 < len(lines) {
-				for j := i + 1; j < len(lines) && strings.HasPrefix(strings.TrimSpace(lines[j]), "-") || strings.TrimSpace(lines[j]) == ""; j++ {
-					arg := strings.TrimSpace(lines[j])
-					if arg != "" {
-						arg = strings.Trim(arg, "\"'")
-						args = append(args, arg)
-					}
-				}
-			}
-
-			return &Hook{
-				Command: cmd,
-				Args:    args,
-			}
-		}
-	}
-
-	return nil
-}
-
 // HookTypeFromString converts a string to HookType.
 func HookTypeFromString(s string) HookType {
 	switch strings.ToLower(s) {

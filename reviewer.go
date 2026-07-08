@@ -43,11 +43,6 @@ func NewReviewer(opts ...Option) *Reviewer {
 	return r
 }
 
-// reviewGraphEnabled checks if graph-based review is enabled.
-func (r *Reviewer) reviewGraphEnabled() bool {
-	return r.cfg.graphEnabled && r.g != nil
-}
-
 // Review parses the diff, builds context, and runs multi-concern analysis.
 func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) {
 	if ctx.Err() != nil {
