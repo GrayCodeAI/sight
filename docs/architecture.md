@@ -126,3 +126,89 @@ srv.ServeHTTP("127.0.0.1:8080") // 🌐 streamable HTTP transport, served at /mc
 **30+ built-in rules** run without LLM overhead — hardcoded secret patterns, SQL injection sinks, unsafe deserialization, etc. Fused with LLM results.
 
 **Taint analysis** (exposed via the `sight_taint` MCP tool and the taint-analysis API) uses SSA-based cross-function tracking to detect source→sink data flows. Sources, sinks, and sanitizers are configurable.
+
+---
+
+## 🔗 Structural Dependency Graph
+
+The `internal/graph` package provides **optional structural dependency analysis** for code reviews:
+
+**Key capabilities:**
+- Parse Go AST to build structural dependency graph
+- Blast-radius analysis: identify all files affected by changes
+- Transitive dependency tracking
+- Impact scoring based on depth and number of dependents
+- SQLite persistence for incremental updates
+
+**Usage:**
+```go
+// Enable graph-backed review
+g := graph.New()
+// ... build graph or load from SQLite ...
+
+// Run blast radius analysis
+result := g.GetBlastRadius([]string{"file.go"})
+fmt.Printf("Direct: %d, Transitive: %d\n", result.Direct, result.Transitive)
+```
+
+**Tools exposed via MCP:** `sight_graph_blastRadius`, `sight_graph_query`, `sight_graph_stats`
+
+---
+
+## 🔒 Security Auditing
+
+The `internal/audit` package provides **agent surface security auditing**:
+
+**Key capabilities:**
+- Concurrent security scanning of multiple targets
+- Filter findings by severity (critical, high, medium, low) or category
+- Integration with MCP hooks, permissions, and endpoints
+- Webhook validation and test requests
+- JSON-serializable audit findings
+
+**Usage:**
+```go
+// Create audit scope
+auditScope := &audit.AuditScope{
+    Targets: []audit.AuditTarget{
+        {Type: audit.AuditTargetHooks, Path: "/hooks/webhook"},
+        {Type: audit.AuditTargetEndpoints, Path: "/api/endpoint"},
+    },
+    Rules: []string{"detect_unauthenticated_endpoints", "detect_hardcoded_secrets"},
+}
+
+// Run audit
+report, err := audit.Audit(ctx, auditScope)
+if report.Count() > 0 {
+    fmt.Printf("Found %d security issues\n", report.Count())
+}
+```
+
+---
+
+## 🌐 Browser Automation Tools
+
+The `internal/tool` package provides **HTTP-based browser automation** capabilities:
+
+**Key capabilities:**
+- HTTP client with configurable timeouts and redirects
+- Browser tool with GET, POST, and header management
+- Response parsing with JSON support
+- Webhook testing: send test payloads and validate responses
+- Formatter for structured output
+
+**Usage:**
+```go
+// Create browser tool
+browser := tool.NewBrowserTool()
+
+// Make requests
+resp, err := browser.Get(ctx, "https://example.com")
+if err == nil && resp.IsSuccess() {
+    fmt.Printf("Status: %d\n", resp.StatusCode)
+}
+
+// Test webhooks
+webhook := tool.NewWebhookTester()
+resp, err := webhook.SendTestRequest(ctx, "https://webhook.example.com", payload)
+```

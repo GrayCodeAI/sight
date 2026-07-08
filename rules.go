@@ -44,7 +44,7 @@ func LoadProjectRules(dir string) string {
 	var b strings.Builder
 	for _, src := range sources {
 		for _, path := range src.paths {
-			data, err := os.ReadFile(path)
+			data, err := os.ReadFile(path) // #nosec G304 -- path is built from filepath.Join(dir, ...) against known rule-file names/globs (.cursor/rules, CLAUDE.md, CONTRIBUTING.md, .sight/rules) under the project directory being reviewed
 			if err != nil {
 				continue
 			}

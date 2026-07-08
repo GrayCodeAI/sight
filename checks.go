@@ -57,7 +57,7 @@ func LoadChecks(dir string) ([]CustomCheck, error) {
 		}
 
 		path := filepath.Join(dir, entry.Name())
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path is joined from the checks directory being loaded (typically ".sight/checks/") and an entry name from os.ReadDir on that same directory, not raw user input
 		if err != nil {
 			continue
 		}
