@@ -196,6 +196,16 @@ func parseRange(s string) (int, int) {
 	if len(parts) == 2 {
 		count, _ = strconv.Atoi(parts[1])
 	}
+	// A malformed header (e.g. a stray "+-1" range after the "+"/"-" prefix is
+	// already stripped) can parse as a negative integer even though Atoi itself
+	// didn't error. Clamp to 0, consistent with parseHunkHeader's documented
+	// "defaults to 0 on parse errors" contract for any other malformed input.
+	if start < 0 {
+		start = 0
+	}
+	if count < 0 {
+		count = 0
+	}
 	return start, count
 }
 
