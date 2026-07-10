@@ -14,6 +14,13 @@
 
 Sight provides intelligent code review capabilities by analyzing diffs with AI. It understands context, identifies issues, and suggests improvements.
 
+## Product boundary
+
+Sight reviews source changes, diffs, dependency structure, and static-analysis
+results. It does not crawl or audit a running website. Browser or deployed-URL
+auditing belongs to `inspect`; Hawk is responsible for composing results when a
+workflow needs both source review and live-target verification.
+
 ## Ecosystem Boundaries
 
 Sight is a Hawk support engine. Keep the dependency edge one-way:
