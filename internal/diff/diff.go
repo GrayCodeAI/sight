@@ -131,10 +131,12 @@ func parseFileChunk(chunk string) File {
 			file.OldPath = strings.TrimPrefix(line, "--- a/")
 		case strings.HasPrefix(line, "--- /dev/null"):
 			file.Added = true
+			file.Deleted = false
 		case strings.HasPrefix(line, "+++ b/"):
 			file.Path = strings.TrimPrefix(line, "+++ b/")
 		case strings.HasPrefix(line, "+++ /dev/null"):
 			file.Deleted = true
+			file.Added = false
 		case strings.HasPrefix(line, "rename from "):
 			file.OldPath = strings.TrimPrefix(line, "rename from ")
 			file.Renamed = true
