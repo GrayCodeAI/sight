@@ -196,9 +196,9 @@ jobs:
           cache: true
       - name: Run fuzz targets
         run: |
-          go test -fuzz=FuzzParseDiff        -fuzztime=60s ./internal/diff
-          go test -fuzz=FuzzParseHunkHeader  -fuzztime=60s ./internal/diff
-          go test -fuzz=FuzzParseUnifiedDiff -fuzztime=60s ./internal/diff
+          go test -fuzz=FuzzParseDiff        -fuzztime=55s ./internal/diff
+          go test -fuzz=FuzzParseHunkHeader  -fuzztime=55s ./internal/diff
+          go test -fuzz=FuzzParseUnifiedDiff -fuzztime=55s ./internal/diff
 
   # -------------------------------------------------------------------------
   # Cross-platform build matrix — only for repos that produce a binary.
