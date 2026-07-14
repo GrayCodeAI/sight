@@ -167,6 +167,19 @@ index abc..def 100644
 	}
 }
 
+func TestParse_NotBothAddedAndDeleted(t *testing.T) {
+	diff := `diff --git a/devnull b/devnull
+--- /dev/null
++++ /dev/null
+`
+	files := Parse(diff)
+	for _, f := range files {
+		if f.Added && f.Deleted {
+			t.Errorf("file %q should not be both added and deleted", f.Path)
+		}
+	}
+}
+
 func TestParse_Empty(t *testing.T) {
 	files := Parse("")
 	if len(files) != 0 {
