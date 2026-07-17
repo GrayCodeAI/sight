@@ -4,13 +4,18 @@ package audit
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 )
+
+// ErrNotImplemented indicates that an audit check has not yet been implemented.
+var ErrNotImplemented = errors.New("audit check not implemented")
 
 // AuditTargetType represents a type of audit target.
 type AuditTargetType int
@@ -27,8 +32,6 @@ const (
 	// AuditTargetEndpoints audits external endpoints and APIs.
 	AuditTargetEndpoints
 )
-
-// AuditTarget represents a target to audit in the codebase.
 
 // AuditTarget represents a target to audit in the codebase.
 type AuditTarget struct {
@@ -270,31 +273,31 @@ func DefaultRules() []string {
 // auditHooks performs audit on MCP hooks.
 func auditHooks(ctx context.Context, target AuditTarget, scope *AuditScope, report *AuditReport) error {
 	// Placeholder: implement hook auditing
-	return nil
+	return ErrNotImplemented
 }
 
 // auditMCPServer performs audit on MCP server configurations.
 func auditMCPServer(ctx context.Context, target AuditTarget, scope *AuditScope, report *AuditReport) error {
 	// Placeholder: implement MCP config auditing
-	return nil
+	return ErrNotImplemented
 }
 
 // auditPermissions performs audit on permission configurations.
 func auditPermissions(ctx context.Context, target AuditTarget, scope *AuditScope, report *AuditReport) error {
 	// Placeholder: implement permission auditing
-	return nil
+	return ErrNotImplemented
 }
 
 // auditSecrets performs audit on secret storage and access.
 func auditSecrets(ctx context.Context, target AuditTarget, scope *AuditScope, report *AuditReport) error {
 	// Placeholder: implement secret auditing
-	return nil
+	return ErrNotImplemented
 }
 
 // auditEndpoints performs audit on external endpoints and APIs.
 func auditEndpoints(ctx context.Context, target AuditTarget, scope *AuditScope, report *AuditReport) error {
 	// Placeholder: implement endpoint auditing
-	return nil
+	return ErrNotImplemented
 }
 
 // ValidateRule checks if a rule is valid.
@@ -387,13 +390,18 @@ func (h *HTTPClient) Get(ctx context.Context, url string) (*HTTPResponse, error)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
-	return &HTTPResponse{StatusCode: resp.StatusCode, Body: resp.Body}, nil
+	bodyBytes, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return &HTTPResponse{StatusCode: resp.StatusCode, Body: bodyBytes}, nil
 }
 
 // HTTPResponse represents an HTTP response.
 type HTTPResponse struct {
 	StatusCode int
-	Body       interface{ Read([]byte) (int, error) }
+	Body       []byte
 }

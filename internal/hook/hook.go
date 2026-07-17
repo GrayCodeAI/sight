@@ -7,12 +7,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 )
-
-// HookType represents the type of hook.
-type HookType string
 
 const (
 	HookBeforeReview HookType = "beforeReview"
@@ -20,6 +18,46 @@ const (
 	HookSessionStart HookType = "sessionStart"
 	HookSessionEnd   HookType = "sessionEnd"
 )
+
+// AllowedCommands is the set of permitted binaries for hook execution.
+var AllowedCommands = map[string]bool{
+	"lint":       true,
+	"staticcheck": true,
+	"golint":     true,
+	"gofmt":      true,
+	"goimports":  true,
+	"go":         true,
+	"git":        true,
+	"make":       true,
+	"npm":        true,
+	"yarn":       true,
+	"pnpm":       true,
+	"pytest":     true,
+	"python":     true,
+	"cargo":      true,
+	"cargo-clippy": true,
+	"shellcheck": true,
+	"eslint":     true,
+	"prettier":   true,
+	"test":       true,
+	"bash":       true,
+	"sh":         true,
+	"cat":        true,
+	"echo":       true,
+	"printf":     true,
+	"wc":         true,
+	"grep":       true,
+	"diff":       true,
+	"sort":       true,
+	"head":       true,
+	"tail":       true,
+}
+
+// hookArgPattern matches shell metacharacters that could enable injection.
+var hookArgPattern = regexp.MustCompile("[;&|$`(){}\\[\\]<>!#*?\\n\\r\\x00]")
+
+// HookType represents the type of hook.
+type HookType string
 
 // Hook represents a lifecycle hook.
 type Hook struct {
@@ -73,7 +111,10 @@ func (d *Dispatcher) dispatch(hookType HookType, context string) error {
 	}
 
 	for _, hook := range hooks {
-		cmd := exec.Command(hook.Command, hook.Args...) // #nosec G204 -- hook.Command is user-configured via hook registration/config files, executing arbitrary commands is the intended feature
+		if err := validateHookCommand(hook); err != nil {
+			return fmt.Errorf("hook %s rejected: %w", hook.Name, err)
+		}
+		cmd := exec.Command(hook.Command, hook.Args...)
 		cmd.Env = append(os.Environ(), fmt.Sprintf("HOOK_CONTEXT=%s", context))
 
 		output, err := cmd.CombinedOutput()
@@ -151,10 +192,31 @@ func (d *Dispatcher) extractCommand(data []byte) string {
 		if strings.HasPrefix(line, "command:") {
 			cmd := strings.TrimPrefix(line, "command:")
 			cmd = strings.TrimSpace(cmd)
+			base := filepath.Base(strings.Fields(cmd)[0])
+			if !AllowedCommands[base] {
+				return ""
+			}
+			if hookArgPattern.MatchString(cmd) {
+				return ""
+			}
 			return cmd
 		}
 	}
 	return ""
+}
+
+// validateHookCommand validates a hook's command and arguments against the allowlist.
+func validateHookCommand(hook *Hook) error {
+	base := filepath.Base(hook.Command)
+	if !AllowedCommands[base] {
+		return fmt.Errorf("command %q not in allowlist", hook.Command)
+	}
+	for _, arg := range hook.Args {
+		if hookArgPattern.MatchString(arg) {
+			return fmt.Errorf("argument %q contains unsafe characters", arg)
+		}
+	}
+	return nil
 }
 
 // HookTypeFromString converts a string to HookType.

@@ -169,25 +169,43 @@ func (g *DependencyGraph) GetDirectDependents(uri string) []string {
 	return g.edges[uri]
 }
 
-// GetAllDependents returns all transitive dependents.
+// MaxTraversalDepth is the maximum depth for graph traversal.
+const MaxTraversalDepth = 64
+
+// GetAllDependents returns all transitive dependents using iterative BFS.
 func (g *DependencyGraph) GetAllDependents(uri string) []string {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
 	visited := make(map[string]bool)
+	visited[uri] = true
 	var result []string
-	var traverse func(n string)
-	traverse = func(n string) {
-		if visited[n] {
-			return
+
+	// Iterative BFS with explicit queue and depth tracking.
+	type entry struct {
+		node string
+		depth int
+	}
+	queue := []entry{{node: uri, depth: 0}}
+	head := 0
+
+	for head < len(queue) {
+		cur := queue[head]
+		head++
+
+		if cur.depth >= MaxTraversalDepth {
+			continue
 		}
-		visited[n] = true
-		for _, child := range g.edges[n] {
+
+		for _, child := range g.edges[cur.node] {
+			if visited[child] {
+				continue
+			}
+			visited[child] = true
 			result = append(result, child)
-			traverse(child)
+			queue = append(queue, entry{node: child, depth: cur.depth + 1})
 		}
 	}
-	traverse(uri)
 	return result
 }
 
