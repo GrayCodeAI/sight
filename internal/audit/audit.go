@@ -392,7 +392,7 @@ func (h *HTTPClient) Get(ctx context.Context, url string) (*HTTPResponse, error)
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if err != nil {
 		return nil, err
 	}

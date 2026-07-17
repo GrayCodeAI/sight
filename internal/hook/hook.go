@@ -114,7 +114,7 @@ func (d *Dispatcher) dispatch(hookType HookType, context string) error {
 		if err := validateHookCommand(hook); err != nil {
 			return fmt.Errorf("hook %s rejected: %w", hook.Name, err)
 		}
-		cmd := exec.Command(hook.Command, hook.Args...)
+		cmd := exec.Command(hook.Command, hook.Args...) // #nosec G204 — validated by AllowedCommands allowlist
 		cmd.Env = append(os.Environ(), fmt.Sprintf("HOOK_CONTEXT=%s", context))
 
 		output, err := cmd.CombinedOutput()
