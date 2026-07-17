@@ -183,7 +183,7 @@ func (g *DependencyGraph) GetAllDependents(uri string) []string {
 
 	// Iterative BFS with explicit queue and depth tracking.
 	type entry struct {
-		node string
+		node  string
 		depth int
 	}
 	queue := []entry{{node: uri, depth: 0}}
