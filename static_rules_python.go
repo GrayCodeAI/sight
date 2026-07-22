@@ -1,0 +1,108 @@
+package sight
+
+import "regexp"
+
+// pythonSecurityRules returns built-in static analysis rules for Python.
+func pythonSecurityRules() []StaticRule {
+	return []StaticRule{
+		// =====================================================================
+		// SECURITY - Python
+		// =====================================================================
+		{
+			ID:          "SEC-PY-001",
+			Name:        "SQL Injection (f-string)",
+			Description: "f-string used in SQL query construction; use parameterized queries",
+			Language:    "python",
+			Pattern:     regexp.MustCompile(`f["'](?:[^"']*(?:SELECT|INSERT|UPDATE|DELETE|DROP)[^"']*)\{`),
+			Antipattern: nil,
+			Severity:    "critical",
+			Category:    "security",
+			CWE:         "CWE-89",
+			Fix:         "Use parameterized queries with %s or ? placeholders passed as a tuple",
+		},
+		{
+			ID:          "SEC-PY-002",
+			Name:        "eval() Usage",
+			Description: "eval() executes arbitrary code and is a common injection vector",
+			Language:    "python",
+			Pattern:     regexp.MustCompile(`\beval\s*\(`),
+			Antipattern: regexp.MustCompile(`(?i)(?:#.*safe|#.*trusted|ast\.literal_eval)`),
+			Severity:    "critical",
+			Category:    "security",
+			CWE:         "CWE-95",
+			Fix:         "Use ast.literal_eval() for data parsing or find a safer alternative to eval()",
+		},
+		{
+			ID:          "SEC-PY-003",
+			Name:        "exec() Usage",
+			Description: "exec() executes arbitrary code strings and is dangerous with user input",
+			Language:    "python",
+			Pattern:     regexp.MustCompile(`\bexec\s*\(`),
+			Antipattern: nil,
+			Severity:    "critical",
+			Category:    "security",
+			CWE:         "CWE-95",
+			Fix:         "Avoid exec(); use structured approaches like importlib or predefined function dispatch",
+		},
+		{
+			ID:          "SEC-PY-004",
+			Name:        "Pickle Deserialization",
+			Description: "pickle.loads() can execute arbitrary code during deserialization",
+			Language:    "python",
+			Pattern:     regexp.MustCompile(`pickle\.loads?\s*\(`),
+			Antipattern: nil,
+			Severity:    "high",
+			Category:    "security",
+			CWE:         "CWE-502",
+			Fix:         "Use JSON or another safe serialization format; if pickle is required, only load from trusted sources",
+		},
+		{
+			ID:          "SEC-PY-005",
+			Name:        "Subprocess Shell Injection",
+			Description: "subprocess with shell=True is vulnerable to shell injection",
+			Language:    "python",
+			Pattern:     regexp.MustCompile(`subprocess\.(?:call|run|Popen|check_output|check_call)\s*\(.*shell\s*=\s*True`),
+			Antipattern: nil,
+			Severity:    "high",
+			Category:    "security",
+			CWE:         "CWE-78",
+			Fix:         "Use shell=False (default) and pass command as a list instead of a string",
+		},
+		{
+			ID:          "SEC-PY-006",
+			Name:        "Assert in Production",
+			Description: "assert statements are stripped with -O flag; do not use for validation",
+			Language:    "python",
+			Pattern:     regexp.MustCompile(`^\s*assert\s+`),
+			Antipattern: regexp.MustCompile(`(?i)(?:test_|_test\.py|conftest|pytest)`),
+			Severity:    "low",
+			Category:    "correctness",
+			CWE:         "CWE-617",
+			Fix:         "Replace assert with explicit validation that raises an appropriate exception",
+		},
+		{
+			ID:          "SEC-PY-007",
+			Name:        "Hardcoded Secret (Python)",
+			Description: "Hardcoded password or secret string detected",
+			Language:    "python",
+			Pattern:     regexp.MustCompile(`(?i)(?:password|secret|api_?key|token|private_?key)\s*=\s*["'][^"']{4,}["']`),
+			Antipattern: regexp.MustCompile(`(?i)(?:test|example|placeholder|TODO|CHANGE|xxx|dummy|fake)`),
+			Severity:    "critical",
+			Category:    "security",
+			CWE:         "CWE-798",
+			Fix:         "Use environment variables or a secrets manager instead of hardcoded credentials",
+		},
+		{
+			ID:          "SEC-PY-008",
+			Name:        "YAML Unsafe Load",
+			Description: "yaml.load() without SafeLoader can execute arbitrary Python objects",
+			Language:    "python",
+			Pattern:     regexp.MustCompile(`yaml\.load\s*\(`),
+			Antipattern: regexp.MustCompile(`Loader\s*=\s*(?:yaml\.)?SafeLoader`),
+			Severity:    "high",
+			Category:    "security",
+			CWE:         "CWE-502",
+			Fix:         "Use yaml.safe_load() or pass Loader=yaml.SafeLoader explicitly",
+		},
+	}
+}
