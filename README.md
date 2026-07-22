@@ -30,6 +30,10 @@ Sight is a Hawk support engine. Keep the dependency edge one-way:
 - do not import removed legacy path `hawk/shared/types`; use `hawk-core-contracts/types`
 - do not import other engines (`eyrie`, `yaad`, `tok`, `trace`, `inspect`) — engines are peers, not dependencies
 
+> **Note:** `memory_bridge.go` is an intentional boundary exception — it calls
+> `yaad` directly for automated memory persistence after reviews. This is documented
+> as a known trade-off; the canonical integration path is via hawk.
+
 ## Features
 
 - **Diff-aware analysis** - Reviews only changed code with full context
