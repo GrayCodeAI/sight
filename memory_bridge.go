@@ -1,5 +1,15 @@
 package sight
 
+// Package-level architectural note:
+// memory_bridge.go is an intentional, scoped exception to the "engines are peers"
+// rule. Sight calls Yaad directly here for the memory integration feature, which
+// requires tight coupling between review findings and memory storage. This is a
+// known trade-off: hawk composes sight+yaad results in most cases, but the
+// memory_bridge provides a direct integration path for automated memory
+// persistence after reviews. If the boundary needs to be restored, move the
+// integration logic to hawk/internal/bridge/ and call it from there instead.
+// See: hawk-eco/hawk/docs/architecture/hawk-current-vs-proposed.md
+
 import (
 	"context"
 	"fmt"
