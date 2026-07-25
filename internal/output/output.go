@@ -146,6 +146,7 @@ func FormatJSON(findings []Finding) (string, error) {
 	}
 	return string(out), nil
 }
+
 // FormatGitHubReview formats all findings as a single GitHub PR review body.
 func FormatGitHubReview(findings []Finding) string {
 	if len(findings) == 0 {
