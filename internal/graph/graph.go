@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
-	"time"
 )
 
 // Node represents a code unit in the dependency graph.
@@ -211,8 +210,6 @@ func (g *DependencyGraph) GetAllDependents(uri string) []string {
 
 // Build parses a Go module and builds the dependency graph.
 func (g *DependencyGraph) Build(ctx context.Context, modulePath string) error {
-	start := time.Now()
-
 	fset := token.NewFileSet()
 	packages, err := parser.ParseDir(fset, modulePath, nil, parser.ParseComments)
 	if err != nil {
@@ -245,7 +242,6 @@ func (g *DependencyGraph) Build(ctx context.Context, modulePath string) error {
 
 	wg.Wait()
 	close(sem)
-	fmt.Printf("Graph built in %v\n", time.Since(start))
 	return nil
 }
 

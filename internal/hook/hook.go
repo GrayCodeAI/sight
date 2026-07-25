@@ -121,8 +121,6 @@ func (d *Dispatcher) dispatch(hookType HookType, context string) error {
 		if err != nil {
 			return fmt.Errorf("hook %s failed: %w, output: %s", hook.Name, err, string(output))
 		}
-
-		fmt.Printf("Hook %s executed successfully\n", hook.Name)
 	}
 
 	return nil
