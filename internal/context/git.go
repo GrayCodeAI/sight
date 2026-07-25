@@ -75,13 +75,13 @@ func FormatContext(contexts []FileContext) string {
 
 // DiffBase returns the diff of the current branch against a base branch.
 func DiffBase(base string) (string, error) {
-	if err := validateGitRef(base); err != nil {
+	if err := ValidateGitRef(base); err != nil {
 		return "", err
 	}
-	// #nosec G204 — base validated by validateGitRef
+	// #nosec G204 — base validated by ValidateGitRef
 	out, err := exec.Command("git", "diff", base+"...HEAD").Output()
 	if err != nil {
-		// #nosec G204 — base validated by validateGitRef
+		// #nosec G204 — base validated by ValidateGitRef
 		out2, err2 := exec.Command("git", "diff", base).Output()
 		if err2 != nil {
 			return "", fmt.Errorf("git diff failed: %w", err)
@@ -93,10 +93,10 @@ func DiffBase(base string) (string, error) {
 
 // ChangedFiles returns the list of files changed relative to a base.
 func ChangedFiles(base string) ([]string, error) {
-	if err := validateGitRef(base); err != nil {
+	if err := ValidateGitRef(base); err != nil {
 		return nil, err
 	}
-	// #nosec G204 — base validated by validateGitRef
+	// #nosec G204 — base validated by ValidateGitRef
 	out, err := exec.Command("git", "diff", "--name-only", base+"...HEAD").Output()
 	if err != nil {
 		return nil, fmt.Errorf("git diff --name-only failed: %w", err)
@@ -129,8 +129,8 @@ func Blame(file string, startLine, endLine int) (string, error) {
 	return parseBlameAuthors(string(out)), nil
 }
 
-// validateGitRef ensures a git ref (branch, tag, SHA) contains no dangerous characters.
-func validateGitRef(ref string) error {
+// ValidateGitRef ensures a git ref (branch, tag, SHA) contains no dangerous characters.
+func ValidateGitRef(ref string) error {
 	if ref == "" {
 		return fmt.Errorf("empty git ref")
 	}
