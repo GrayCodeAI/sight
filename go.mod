@@ -9,8 +9,6 @@ require (
 	golang.org/x/tools v0.45.0
 )
 
-replace github.com/GrayCodeAI/hawk-core-contracts => ../hawk-core-contracts
-
 require (
 	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
