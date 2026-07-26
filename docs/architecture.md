@@ -29,6 +29,7 @@ sight/
 ├── reviewer.go               🔄 Reviewer: parallel concern orchestration
 ├── options.go                ⚙️ config, With* functions, presets
 ├── provider.go               🔌 Provider interface (consumers implement)
+├── qualitygraph/             🕸️ Privacy-safe shared quality graph projection
 ├── severity.go               📊 Re-exports from hawk-core-contracts/types
 ├── static_rules.go           🛡️ 30+ static analysis rules
 ├── taint_analysis.go         🔗 SSA-based taint tracking
@@ -43,6 +44,10 @@ sight/
     ├── context/              📖 Code context + git blame
     └── output/               📊 SARIF and terminal formatters
 ```
+
+`qualitygraph.Build` is an explicit read-only boundary after review. It never
+runs a review or persists graph state, and it excludes source and human-readable
+review content from graph attributes.
 
 ---
 
