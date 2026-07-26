@@ -476,7 +476,13 @@ func matchesExclude(path string, patterns []string) bool {
 		// Check if the pattern contains a path separator — if so, match
 		// against the full path; otherwise match against the basename.
 		if strings.Contains(pattern, "/") {
-			if matched, _ := filepath.Match(pattern, path); matched {
+			matched, err := filepath.Match(pattern, path)
+			if err != nil {
+				// Malformed glob pattern — skip it rather than silently
+				// failing to match.
+				continue
+			}
+			if matched {
 				return true
 			}
 		} else {
@@ -485,7 +491,11 @@ func matchesExclude(path string, patterns []string) bool {
 				return true
 			}
 			// Glob match on basename
-			if matched, _ := filepath.Match(pattern, base); matched {
+			matched, err := filepath.Match(pattern, base)
+			if err != nil {
+				continue
+			}
+			if matched {
 				return true
 			}
 		}

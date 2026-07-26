@@ -65,6 +65,14 @@ for _, f := range result.Findings {
 
 See the [examples/](examples/) directory for runnable code samples.
 
+## Portable quality graph
+
+`qualitygraph.Build` projects a completed `sight.Result` into bounded shared
+quality nodes, report-to-finding `contains` edges, and observation events.
+Source diffs, paths, report text, messages, fixes, and reasoning are retained
+only as SHA-256 digests. Sight remains the review source of truth; consumers
+such as Hawk may journal and compose the projection.
+
 ## Provider Interface
 
 Implement the `Provider` interface to use any LLM:
