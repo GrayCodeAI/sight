@@ -7,6 +7,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [Unreleased]
+
+### Removed
+- **Dead audit/graph API surface** (breaking, pre-1.0). The
+  `WithGraph`, `WithAuditMode`, and `WithAuditTargets` options and the
+  `AuditMode`, `AuditTarget`, `AuditTargetType`, `AuditOption`, and
+  `ParseAuditMode` types configured `Reviewer` fields that were never
+  read, and the `internal/graph` and `internal/audit` packages had no
+  callers. Removed the options, types, packages, the unused `Reviewer`
+  fields, and the `graph`/`audit` `.sight.toml` keys (the keys were
+  silently ignored in effect; they now remain unparsed, which is the
+  same behavior). Consumers should use `qualitygraph` for graph
+  projection and `inspect` for deployed-surface auditing.
+
 ## [0.1.2] - 2026-07-04
 
 ### Changed
