@@ -9,6 +9,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+- Extracted the out-of-range confidence fallback in `toPublicFindings`
+  into a documented package constant, `defaultConfidence` (0.6). No
+  behavior change.
+
 ### Fixed
 - **Configured fail thresholds now survive contract conversion.**
   `ToContractResult` copied `FailOn` by field assignment, leaving the

@@ -369,6 +369,11 @@ func (r *Reviewer) ReviewFiles(ctx context.Context, files []FileChange) (*Result
 	return r.Review(ctx, combined)
 }
 
+// defaultConfidence is the confidence assigned to LLM findings whose
+// reported value is missing or out of range (outside (0, 1]). It matches
+// the "medium" confidence band used elsewhere in sight.
+const defaultConfidence = 0.6
+
 func toPublicFindings(internal []review.Finding) []Finding {
 	out := make([]Finding, len(internal))
 	for i, f := range internal {
@@ -379,7 +384,7 @@ func toPublicFindings(internal []review.Finding) []Finding {
 		}
 		conf := f.Confidence
 		if conf <= 0 || conf > 1.0 {
-			conf = 0.6 // default for LLM findings
+			conf = defaultConfidence
 		}
 		out[i] = Finding{
 			Concern:    f.Concern,
