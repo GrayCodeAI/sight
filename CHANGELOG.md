@@ -9,6 +9,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+- **Provider failures are now visible in `Stats`.** A review in which
+  every LLM call failed previously succeeded silently — errors only
+  appeared in the human-readable `Report`. `Stats.LLMErrors` now
+  records one entry per failed call (concern calls and the
+  self-reflection pass), and `ToContractResult` carries them into the
+  shared `reviewcontracts.Stats.LLMErrors` field so hawk can surface
+  partial results.
+
 ### Removed
 - **Dead audit/graph API surface** (breaking, pre-1.0). The
   `WithGraph`, `WithAuditMode`, and `WithAuditTargets` options and the

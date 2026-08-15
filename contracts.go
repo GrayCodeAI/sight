@@ -94,6 +94,7 @@ func toContractStats(s Stats) reviewcontracts.Stats {
 		AverageConfidence:   s.AverageConfidence,
 		HighConfidenceCount: s.HighConfidenceCount,
 		LowConfidenceCount:  s.LowConfidenceCount,
+		LLMErrors:           s.LLMErrors,
 	}
 }
 

@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/GrayCodeAI/sight"
+	"github.com/GrayCodeAI/sight/internal/review"
 )
 
 // mockProvider implements sight.Provider for testing.
@@ -240,5 +242,92 @@ func TestReview_Deduplication(t *testing.T) {
 
 	if len(result.Findings) != 1 {
 		t.Errorf("expected 1 finding after dedup, got %d", len(result.Findings))
+	}
+}
+
+func TestReview_StatsLLMErrorsWhenAllProvidersFail(t *testing.T) {
+	provider := &mockProvider{err: fmt.Errorf("rate limited")}
+
+	result, err := sight.Review(
+		context.Background(), testDiff,
+		sight.WithProvider(provider),
+	)
+	if err != nil {
+		t.Fatalf("Review() error = %v, want nil (provider errors are non-fatal)", err)
+	}
+
+	if len(result.Stats.LLMErrors) == 0 {
+		t.Fatal("Stats.LLMErrors is empty; want one entry per failed concern")
+	}
+
+	// The default config reviews five concerns; every one of them must
+	// report its error so callers can tell the review was partial.
+	concerns := map[string]bool{}
+	for _, e := range result.Stats.LLMErrors {
+		if !strings.Contains(e, "rate limited") {
+			t.Errorf("LLMErrors entry %q does not mention the provider error", e)
+		}
+		name := e
+		if idx := strings.Index(name, "]"); idx >= 0 {
+			name = strings.Trim(name[:idx], "[]")
+		}
+		concerns[name] = true
+	}
+	for _, want := range []string{"security", "bugs", "performance", "correctness", "style"} {
+		if !concerns[want] {
+			t.Errorf("no LLM error reported for concern %q; got %v", want, result.Stats.LLMErrors)
+		}
+	}
+
+	contract := sight.ToContractResult(result)
+	if len(contract.Stats.LLMErrors) != len(result.Stats.LLMErrors) {
+		t.Errorf("contract Stats.LLMErrors len = %d, want %d", len(contract.Stats.LLMErrors), len(result.Stats.LLMErrors))
+	}
+}
+
+// reflectFailProvider succeeds for concern calls but fails the
+// self-reflection call, which is identifiable by its system prompt.
+type reflectFailProvider struct {
+	response string
+	calls    int64
+	mu       sync.Mutex
+}
+
+func (p *reflectFailProvider) Chat(ctx context.Context, messages []sight.Message, opts sight.ChatOpts) (*sight.Response, error) {
+	p.mu.Lock()
+	p.calls++
+	p.mu.Unlock()
+	if opts.System == review.ReflectSystemPrompt {
+		return nil, fmt.Errorf("reflection backend down")
+	}
+	return &sight.Response{Content: p.response, TokensUsed: 10}, nil
+}
+
+func TestReview_StatsLLMErrorsIncludesReflectionFailure(t *testing.T) {
+	provider := &reflectFailProvider{
+		response: `[{"file": "handler.go", "line": 13, "severity": "high", "message": "SQL injection", "fix": "use params"}]`,
+	}
+
+	result, err := sight.Review(
+		context.Background(), testDiff,
+		sight.WithProvider(provider),
+		sight.WithConcerns("security"),
+		sight.WithParallel(false),
+		sight.WithReflection(true),
+	)
+	if err != nil {
+		t.Fatalf("Review() error = %v, want nil (reflection errors are non-fatal)", err)
+	}
+
+	if len(result.Stats.LLMErrors) != 1 {
+		t.Fatalf("Stats.LLMErrors = %v, want exactly one reflection entry", result.Stats.LLMErrors)
+	}
+	if !strings.HasPrefix(result.Stats.LLMErrors[0], "[reflection]") || !strings.Contains(result.Stats.LLMErrors[0], "reflection backend down") {
+		t.Errorf("unexpected reflection error entry: %q", result.Stats.LLMErrors[0])
+	}
+
+	// The pre-reflection findings must survive the failed reflection pass.
+	if len(result.Findings) == 0 {
+		t.Error("findings were lost when the reflection pass failed")
 	}
 }

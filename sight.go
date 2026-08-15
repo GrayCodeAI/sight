@@ -70,6 +70,11 @@ type Stats struct {
 	HighConfidenceCount int `json:"high_confidence_count"`
 	// LowConfidenceCount is the number of findings with confidence < 0.5.
 	LowConfidenceCount int `json:"low_confidence_count"`
+	// LLMErrors records non-fatal provider errors encountered during
+	// analysis, one entry per failed call (prefixed with the concern name,
+	// or "[reflection]" for the self-reflection pass). Findings may be
+	// partial when it is non-empty.
+	LLMErrors []string `json:"llm_errors,omitempty"`
 }
 
 // Result is the complete output of a review operation.
