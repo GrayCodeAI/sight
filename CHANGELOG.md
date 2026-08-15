@@ -10,6 +10,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Fixed
+- **Configured fail thresholds now survive contract conversion.**
+  `ToContractResult` copied `FailOn` by field assignment, leaving the
+  contract's `FailOnSet` false so its `Failed()` ignored a
+  user-configured below-critical threshold (e.g. `WithFailOn(High)`
+  from the `CI` preset). Conversion now records the threshold via
+  `SetFailOn`, so the contract `Result.Failed()` honors it.
 - **Provider failures are now visible in `Stats`.** A review in which
   every LLM call failed previously succeeded silently — errors only
   appeared in the human-readable `Report`. `Stats.LLMErrors` now
