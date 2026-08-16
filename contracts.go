@@ -94,6 +94,7 @@ func toContractStats(s Stats) reviewcontracts.Stats {
 		AverageConfidence:   s.AverageConfidence,
 		HighConfidenceCount: s.HighConfidenceCount,
 		LowConfidenceCount:  s.LowConfidenceCount,
+		LLMErrors:           s.LLMErrors,
 	}
 }
 
@@ -113,13 +114,17 @@ func ToContractResult(r *Result) *reviewcontracts.Result {
 	if r == nil {
 		return nil
 	}
-	return &reviewcontracts.Result{
+	res := &reviewcontracts.Result{
 		Findings:            ToContractFindings(r.Findings),
 		Comments:            ToContractInlineComments(r.Comments),
 		Stats:               toContractStats(r.Stats),
 		Report:              r.Report,
-		FailOn:              r.FailOn,
 		SASTFusion:          toContractSASTFusion(r.SASTFusion),
 		ConfidenceBreakdown: toContractConfidenceBreakdown(r.ConfidenceBreakdown),
 	}
+	// Set the threshold through SetFailOn so FailOnSet is recorded: the
+	// contract's Failed() ignores a directly-assigned FailOn below
+	// critical, which would drop a user-configured threshold.
+	res.SetFailOn(r.FailOn)
+	return res
 }

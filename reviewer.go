@@ -12,7 +12,6 @@ import (
 	"github.com/GrayCodeAI/sight/internal/comment"
 	gitctx "github.com/GrayCodeAI/sight/internal/context"
 	"github.com/GrayCodeAI/sight/internal/diff"
-	"github.com/GrayCodeAI/sight/internal/graph"
 	"github.com/GrayCodeAI/sight/internal/output"
 	"github.com/GrayCodeAI/sight/internal/review"
 )
@@ -20,27 +19,12 @@ import (
 // Reviewer is a reusable code reviewer. Create one with NewReviewer and call
 // Review multiple times. It is safe for concurrent use.
 type Reviewer struct {
-	cfg   *config
-	g     *graph.DependencyGraph
-	audit bool
+	cfg *config
 }
 
 // NewReviewer creates a configured Reviewer.
 func NewReviewer(opts ...Option) *Reviewer {
-	cfg := buildConfig(opts)
-	r := &Reviewer{cfg: cfg}
-
-	// Enable graph if available
-	if cfg.graphEnabled {
-		r.g = graph.New()
-	}
-
-	// Enable audit if configured
-	if cfg.auditMode != AuditModeNone {
-		r.audit = true
-	}
-
-	return r
+	return &Reviewer{cfg: buildConfig(opts)}
 }
 
 // Review parses the diff, builds context, and runs multi-concern analysis.
@@ -266,7 +250,11 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 
 	// Self-reflection pass: validate findings with a second LLM call
 	if r.cfg.reflection && len(allFindings) > 0 && ctx.Err() == nil {
-		allFindings = r.reflect(ctx, allFindings, rawDiff, &tokensUsed)
+		reflected, err := r.reflect(ctx, allFindings, rawDiff, &tokensUsed)
+		if err != nil {
+			llmErrors = append(llmErrors, fmt.Sprintf("[reflection] %v", err))
+		}
+		allFindings = reflected
 	}
 
 	sort.Slice(allFindings, func(i, j int) bool {
@@ -320,6 +308,7 @@ func (r *Reviewer) Review(ctx context.Context, rawDiff string) (*Result, error) 
 			AverageConfidence:   avgConf,
 			HighConfidenceCount: highConfCount,
 			LowConfidenceCount:  lowConfCount,
+			LLMErrors:           llmErrors,
 		},
 		FailOn: r.cfg.failOn,
 	}
@@ -380,6 +369,11 @@ func (r *Reviewer) ReviewFiles(ctx context.Context, files []FileChange) (*Result
 	return r.Review(ctx, combined)
 }
 
+// defaultConfidence is the confidence assigned to LLM findings whose
+// reported value is missing or out of range (outside (0, 1]). It matches
+// the "medium" confidence band used elsewhere in sight.
+const defaultConfidence = 0.6
+
 func toPublicFindings(internal []review.Finding) []Finding {
 	out := make([]Finding, len(internal))
 	for i, f := range internal {
@@ -390,7 +384,7 @@ func toPublicFindings(internal []review.Finding) []Finding {
 		}
 		conf := f.Confidence
 		if conf <= 0 || conf > 1.0 {
-			conf = 0.6 // default for LLM findings
+			conf = defaultConfidence
 		}
 		out[i] = Finding{
 			Concern:    f.Concern,
@@ -550,8 +544,10 @@ func extractTaintSink(msg string) string {
 	return rest
 }
 
-// reflect runs the self-reflection pass to validate findings.
-func (r *Reviewer) reflect(ctx context.Context, findings []Finding, rawDiff string, tokensUsed *int) []Finding {
+// reflect runs the self-reflection pass to validate findings. When the
+// reflection LLM call fails it returns the original findings together with
+// the error, so the caller can surface it without losing the review.
+func (r *Reviewer) reflect(ctx context.Context, findings []Finding, rawDiff string, tokensUsed *int) ([]Finding, error) {
 	internalFindings := make([]review.Finding, len(findings))
 	for i, f := range findings {
 		internalFindings[i] = review.Finding{
@@ -578,16 +574,16 @@ func (r *Reviewer) reflect(ctx context.Context, findings []Finding, rawDiff stri
 		System:      review.ReflectSystemPrompt,
 	})
 	if err != nil {
-		return findings
+		return findings, err
 	}
 
 	*tokensUsed += resp.TokensUsed
 
 	reflections := review.ParseReflectResponse(resp.Content)
 	if len(reflections) == 0 {
-		return findings
+		return findings, nil
 	}
 
 	validated := review.ApplyReflectionWithScore(internalFindings, reflections, r.cfg.minScore)
-	return toPublicFindings(validated)
+	return toPublicFindings(validated), nil
 }

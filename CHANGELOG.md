@@ -7,6 +7,40 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [Unreleased]
+
+### Changed
+- Extracted the out-of-range confidence fallback in `toPublicFindings`
+  into a documented package constant, `defaultConfidence` (0.6). No
+  behavior change.
+
+### Fixed
+- **Configured fail thresholds now survive contract conversion.**
+  `ToContractResult` copied `FailOn` by field assignment, leaving the
+  contract's `FailOnSet` false so its `Failed()` ignored a
+  user-configured below-critical threshold (e.g. `WithFailOn(High)`
+  from the `CI` preset). Conversion now records the threshold via
+  `SetFailOn`, so the contract `Result.Failed()` honors it.
+- **Provider failures are now visible in `Stats`.** A review in which
+  every LLM call failed previously succeeded silently — errors only
+  appeared in the human-readable `Report`. `Stats.LLMErrors` now
+  records one entry per failed call (concern calls and the
+  self-reflection pass), and `ToContractResult` carries them into the
+  shared `reviewcontracts.Stats.LLMErrors` field so hawk can surface
+  partial results.
+
+### Removed
+- **Dead audit/graph API surface** (breaking, pre-1.0). The
+  `WithGraph`, `WithAuditMode`, and `WithAuditTargets` options and the
+  `AuditMode`, `AuditTarget`, `AuditTargetType`, `AuditOption`, and
+  `ParseAuditMode` types configured `Reviewer` fields that were never
+  read, and the `internal/graph` and `internal/audit` packages had no
+  callers. Removed the options, types, packages, the unused `Reviewer`
+  fields, and the `graph`/`audit` `.sight.toml` keys (the keys were
+  silently ignored in effect; they now remain unparsed, which is the
+  same behavior). Consumers should use `qualitygraph` for graph
+  projection and `inspect` for deployed-surface auditing.
+
 ## [0.1.2] - 2026-07-04
 
 ### Changed
